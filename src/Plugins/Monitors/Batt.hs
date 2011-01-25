@@ -100,7 +100,7 @@ batteryFiles bat =
   where prefix = sysDir </> bat
         files ch = Files { fFull = prefix </> ch ++ "_full"
                          , fNow = prefix </> ch ++ "_now"
-                         , fCurrent = prefix </> "current_now"
+                         , fCurrent = prefix </> "power_now"
                          , fVoltage = prefix </> "voltage_now" }
 
 haveAc :: FilePath -> IO Bool
