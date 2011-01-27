@@ -36,23 +36,21 @@ parseString c s =
 
 -- | Gets the string and combines the needed parsers
 stringParser :: String -> Parser [[(String, String)]]
-stringParser c = manyTill (textParser c <|> colorParser) eof
+stringParser c = manyTill (textParser c
+                           <|> colorParser) eof
 
 -- | Parses a maximal string without color markup.
 textParser :: String -> Parser [(String, String)]
-textParser c = do s <- many1 $
-                    noneOf "<" <|>
-                    ( try $ notFollowedBy' (char '<')
-                                           (string "fc=" <|> string "/fc>" ) )
+textParser c = do s <- many1 escapeChar
                   return [(s, c)]
+                  
+-- | List of chars to escape               
+charsToEscape :: [Char]                  
+charsToEscape = "<>\\"
 
--- | Wrapper for notFollowedBy that returns the result of the first parser.
---   Also works around the issue that, at least in Parsec 3.0.0, notFollowedBy
---   accepts only parsers with return type Char.
-notFollowedBy' :: Parser a -> Parser b -> Parser a
-notFollowedBy' p e = do x <- p
-                        notFollowedBy $ try (e >> return '*')
-                        return x
+-- | Parses escaped characters, in our case just <, > and \
+escapeChar :: Parser Char
+escapeChar = (char '\\' >> (choice $ map char charsToEscape)) <|> noneOf charsToEscape
 
 -- | Parsers a string wrapped in a color specification.
 colorParser :: Parser [(String, String)]
