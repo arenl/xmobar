@@ -16,8 +16,8 @@ maintainer:         Jose A. Ortega Ruiz <jao@gnu.org>
 cabal-version:      >= 1.6
 build-type:         Simple
 
-data-files:         samples/xmobar.config
 extra-source-files: README, NEWS,
+                    samples/xmobar.config, samples/xmonadpropwrite.hs
                     samples/Plugins/helloworld.config,
                     samples/Plugins/HelloWorld.hs
 

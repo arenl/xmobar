@@ -654,9 +654,11 @@ Monitors have default aliases.
 
 - Aliases to `PropName`
 - Reads the X property named by `PropName` (a string) and displays its
-  value. The [xmonadpropwrite script] in xmobar's distribution can be
-  used to set the given property from the output of any other program
-  or script.
+  value. The [samples/xmonadpropwrite.hs script] in xmobar's
+  distribution can be used to set the given property from the output
+  of any other program or script.
+
+[samples/xmonadpropwrite.hs script]: https://github.com/jaor/xmobar/raw/master/samples/xmonadpropwrite.hs
 
 ## Monitor Plugins Commands Arguments
 
@@ -666,9 +668,10 @@ These are the arguments that can be used for internal commands in the
 - `-t` _string_  Output template
     - Template for the monitor output. Field names must be enclosed
       between pointy brackets (`<foo>`) and will be substituted by the
-      computed values. You can also specify a foreground color for a
-      region bracketing it between `<fc=color>` and `</fc>`. The rest
-      of the template is output verbatim.
+      computed values. You can also specify the foreground (and
+      optionally, background) color for a region by bracketing it
+      between `<fc=fgcolor>` (or `<fc=fgcolor,bgcolor>`) and
+      `</fc>`. The rest of the template is output verbatim.
     - Long option: `--template`
     - Default value: per monitor (see above).
 - `-H` _number_ The high threshold.

@@ -107,7 +107,7 @@ haveAc :: FilePath -> IO Bool
 haveAc f = do
   exists <- fileExist ofile
   if exists
-    then fmap ((== "1\n") . B.unpack) (catRead ofile)
+    then fmap ((== "1\n") . B.unpack) (B.readFile ofile)
     else return False
   where ofile = sysDir </> f
 
@@ -122,7 +122,7 @@ readBattery files =
                         (3600 * b / 1000000) -- wattseconds
                         (c / 1000000) -- volts
                         (d / c) -- amperes
-    where grab = fmap (read . B.unpack) . catRead
+    where grab = fmap (read . B.unpack) . B.readFile
 
 readBatteries :: BattOpts -> [Files] -> IO Result
 readBatteries opts bfs =

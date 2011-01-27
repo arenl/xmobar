@@ -53,7 +53,6 @@ module Plugins.Monitors.Common (
                        -- * Threaded Actions
                        -- $thread
                        , doActionTwiceWithDelay
-                       , catRead
                        ) where
 
 
@@ -67,7 +66,6 @@ import Numeric
 import Text.ParserCombinators.Parsec
 import System.Console.GetOpt
 import Control.Exception (SomeException,handle)
-import System.Process (readProcess)
 
 import Plugins
 -- $monitor
@@ -441,6 +439,3 @@ getData action var d =
     do threadDelay d
        s <- action
        modifyMVar_ var (\_ -> return $! s)
-
-catRead :: FilePath -> IO B.ByteString
-catRead file = B.pack `fmap` readProcess "/bin/cat" [file] ""
