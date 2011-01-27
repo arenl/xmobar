@@ -231,7 +231,7 @@ updateWin v = do
 -- $print
 
 -- | Draws in and updates the window
-drawInWin :: Rectangle -> [[(String, String)]] -> X ()
+drawInWin :: Rectangle -> [BarFragment] -> X ()
 drawInWin (Rectangle _ _ wid ht) ~[left,center,right] = do
   r <- ask
   let (c,d ) = (config &&& display) r
@@ -258,6 +258,7 @@ drawInWin (Rectangle _ _ wid ht) ~[left,center,right] = do
     io $ freePixmap d p
     -- resync
     io $ sync       d True
+
 
 drawBorder :: Border -> Display -> Drawable -> GC -> Pixel
               -> Dimension -> Dimension -> IO ()

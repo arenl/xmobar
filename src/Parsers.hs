@@ -32,10 +32,10 @@ import Control.Monad ( liftM, fail )
 type Color = String
 
 -- | The possible content of a "piece" of the bar
-data BarFragment = String String    -- ^ A simple string
-                 | Gap Int          -- ^ Positioning (can be negative)
-                 | Foreground (Maybe Color) [BarFragment]
-                 | Background (Maybe Color) [BarFragment]
+data BarFragment = Literal String -- ^ A simple string
+                 | Gap Int        -- ^ Positioning (can be negative)
+                 | SetFg (Maybe Color) [BarFragment]
+                 | SetBg (Maybe Color) [BarFragment]
                  deriving (Show)
                    
 -- | Runs the string parser
@@ -43,7 +43,7 @@ data BarFragment = String String    -- ^ A simple string
 parseString :: Config -> String -> IO [BarFragment]
 parseString c s =
   case parse (manyTill fragmentParser eof) "" s of
-    Left  _ -> return $ [String ("Could not parse string: " ++ s)]
+    Left  _ -> return $ [Literal ("Could not parse string: " ++ s)]
     Right x -> return x
 
 fragmentParser :: Parser BarFragment
@@ -54,8 +54,8 @@ fragmentParser = choice (map try [ fgColorParser
 
 -- | Parses a string
 stringParser :: Parser BarFragment
-stringParser = liftM String (many1 (try escapedChar <|>
-                                    noneOf (map snd charsToEscape)))
+stringParser = liftM Literal (many1 (try escapedChar <|>
+                                     noneOf (map snd charsToEscape)))
                      
 -- | Returns escaped chars
 escapedChar :: Parser Char
@@ -77,16 +77,16 @@ fgColorParser :: Parser BarFragment
 fgColorParser = do
   (color, content) <- tagParser "fg"
   case content of
-    Nothing -> return (Foreground color [])
-    Just fs -> return (Foreground color fs)
+    Nothing -> return (SetFg color [])
+    Just fs -> return (SetFg color fs)
 
 -- | Background
 bgColorParser :: Parser BarFragment
 bgColorParser = do
   (color, content) <- tagParser "bg"
   case content of
-    Nothing -> return (Background color [])
-    Just fs -> return (Background color fs)
+    Nothing -> return (SetBg color [])
+    Just fs -> return (SetBg color fs)
     
 -- | Spacing
 gapParser :: Parser BarFragment
@@ -103,11 +103,14 @@ gapParser = do
 tagParser :: String -> Parser (Maybe String, Maybe [BarFragment])
 tagParser t = do
   char '<' >> string t
-  value <- optionMaybe (char '=' >> (manyTill anyChar $ char '/' <|> char '>'))
-  content <- optionMaybe (manyTill fragmentParser (try $ string $ "</" ++ t ++ ">"))
-  case content of
-    Nothing -> char '>' >> return (value, Nothing)
-    x       -> return (value, x)
+  value <- liftM Just (char '=' >> (manyTill anyChar
+                                    (lookAhead $ char '/' <|> char '>'))) <|>
+           (lookAhead (char '>') >> return Nothing)
+  content <- liftM Just (char '>' >> (manyTill fragmentParser
+                                      (try $ string $ "</" ++ t ++ ">"))) <|>
+             (string "/>" >> return Nothing)
+  return (value, content)
+
 
 -- | Parses the output template string
 templateStringParser :: Config -> Parser (String,String,String)
