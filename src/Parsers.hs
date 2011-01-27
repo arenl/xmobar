@@ -27,14 +27,13 @@ import Commands
 import qualified Data.Map as Map
 import Text.ParserCombinators.Parsec
 import Text.ParserCombinators.Parsec.Perm
-import Control.Monad ( liftM )
+import Control.Monad ( liftM, fail )
 
 type Color = String
 
 -- | The possible content of a "piece" of the bar
 data BarFragment = String String    -- ^ A simple string
                  | Gap Int          -- ^ Positioning (can be negative)
-                 | Error String     -- ^ An error message
                  | Foreground (Maybe Color) [BarFragment]
                  | Background (Maybe Color) [BarFragment]
                  deriving (Show)
@@ -44,12 +43,13 @@ data BarFragment = String String    -- ^ A simple string
 parseString :: Config -> String -> IO [BarFragment]
 parseString c s =
   case parse (manyTill fragmentParser eof) "" s of
-    Left  _ -> return $ [Error ("Could not parse string: " ++ s)]
+    Left  _ -> return $ [String ("Could not parse string: " ++ s)]
     Right x -> return x
 
 fragmentParser :: Parser BarFragment
 fragmentParser = choice (map try [ fgColorParser
                                  , bgColorParser
+                                 , gapParser
                                  ] ++ [stringParser])
 
 -- | Parses a string
@@ -64,7 +64,7 @@ escapedChar = do
   escapeCode <- manyTill anyChar (char ';')
   case lookup escapeCode charsToEscape of
     Just c  -> return c
-    Nothing -> unexpected "Unknown escape character."
+    Nothing -> fail "Unknown escape character."
 
 -- | List of chars to escape               
 charsToEscape :: [(String, Char)]
@@ -80,6 +80,7 @@ fgColorParser = do
     Nothing -> return (Foreground color [])
     Just fs -> return (Foreground color fs)
 
+-- | Background
 bgColorParser :: Parser BarFragment
 bgColorParser = do
   (color, content) <- tagParser "bg"
@@ -87,6 +88,16 @@ bgColorParser = do
     Nothing -> return (Background color [])
     Just fs -> return (Background color fs)
     
+-- | Spacing
+gapParser :: Parser BarFragment
+gapParser = do
+  (v, c) <- tagParser "p"
+  case c of
+    Just _ -> fail "The tag \"p\" must be closed in place."
+    Nothing  -> case v of
+      Nothing -> fail "The tag \"p\" requires a value."
+      Just v  -> return (Gap $ read v)
+  
 -- | Tag parser
 --   Accepts the name of the tag, returns (Value, Maybe Content)
 tagParser :: String -> Parser (Maybe String, Maybe [BarFragment])
