@@ -231,7 +231,7 @@ updateWin v = do
 -- $print
 
 -- | Draws in and updates the window
-drawInWin :: Rectangle -> [[(String, String)]] -> X ()
+drawInWin :: Rectangle -> [[(String, BarFragment)]] -> X ()
 drawInWin (Rectangle _ _ wid ht) ~[left,center,right] = do
   r <- ask
   let (c,d ) = (config &&& display) r

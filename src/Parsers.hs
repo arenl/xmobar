@@ -17,6 +17,7 @@ module Parsers
     ( parseString
     , parseTemplate
     , parseConfig
+    , BarFragment(..)
     ) where
 
 import Config
@@ -26,34 +27,36 @@ import Commands
 import qualified Data.Map as Map
 import Text.ParserCombinators.Parsec
 import Text.ParserCombinators.Parsec.Perm
+import Control.Monad ( liftM )
 
+type Color = String
+
+-- | The possible content of a "piece" of the bar
+data BarFragment = String String    -- ^ A simple string
+                 | Gap Int          -- ^ Positioning (can be negative)
+                 | Error String     -- ^ An error message
+                 | Foreground (Maybe Color) [BarFragment]
+                 | Background (Maybe Color) [BarFragment]
+                 deriving (Show)
+                   
 -- | Runs the string parser
-parseString :: Config -> String -> IO [(String, String)]
+--   Returns [(Fragment, FgColor, BgColor)
+parseString :: Config -> String -> IO [BarFragment]
 parseString c s =
-    case parse (stringParser (fgColor c)) "" s of
-      Left  _ -> return [("Could not parse string: " ++ s, fgColor c)]
-      Right x -> return (concat x)
+  case parse (manyTill fragmentParser eof) "" s of
+    Left  _ -> return $ [Error ("Could not parse string: " ++ s)]
+    Right x -> return x
 
--- | Gets the string and combines the needed parsers
-stringParser :: String -> Parser [[(String, String)]]
-stringParser c = manyTill (textParser c
-                           <|> colorParser) eof
+fragmentParser :: Parser BarFragment
+fragmentParser = choice (map try [ fgColorParser
+                                 , bgColorParser
+                                 ] ++ [stringParser])
 
--- | Parses a maximal string without color markup.
-textParser :: String -> Parser [(String, String)]
-textParser c = do s <- many1 charParser
-                  return [(s, c)]
-                  
--- | Parses escaped characters, in our case just <, > and \
-charParser :: Parser Char
-charParser = try escapedChar <|> noneOf (map snd charsToEscape)
-
--- | List of chars to escape               
-charsToEscape :: [(String, Char)]
-charsToEscape = [ ("lt", '<')
-                , ("gt", '>')
-                ]
-
+-- | Parses a string
+stringParser :: Parser BarFragment
+stringParser = liftM String (many1 (try escapedChar <|>
+                                    noneOf (map snd charsToEscape)))
+                     
 -- | Returns escaped chars
 escapedChar :: Parser Char
 escapedChar = do
@@ -63,16 +66,37 @@ escapedChar = do
     Just c  -> return c
     Nothing -> unexpected "Unknown escape character."
 
--- | Parsers a string wrapped in a color specification.
-colorParser :: Parser [(String, String)]
-colorParser = do
-  c <- between (string "<fc=") (string ">") colors
-  s <- manyTill (textParser c <|> colorParser) (try $ string "</fc>")
-  return (concat s)
+-- | List of chars to escape               
+charsToEscape :: [(String, Char)]
+charsToEscape = [ ("lt", '<')
+                , ("gt", '>')
+                ]
+                
+-- | Foreground
+fgColorParser :: Parser BarFragment
+fgColorParser = do
+  (color, content) <- tagParser "fg"
+  case content of
+    Nothing -> return (Foreground color [])
+    Just fs -> return (Foreground color fs)
 
--- | Parses a color specification (hex or named)
-colors :: Parser String
-colors = many1 (alphaNum <|> char ',' <|> char '#')
+bgColorParser :: Parser BarFragment
+bgColorParser = do
+  (color, content) <- tagParser "bg"
+  case content of
+    Nothing -> return (Background color [])
+    Just fs -> return (Background color fs)
+    
+-- | Tag parser
+--   Accepts the name of the tag, returns (Value, Maybe Content)
+tagParser :: String -> Parser (Maybe String, Maybe [BarFragment])
+tagParser t = do
+  char '<' >> string t
+  value <- optionMaybe (char '=' >> (manyTill anyChar $ char '/' <|> char '>'))
+  content <- optionMaybe (manyTill fragmentParser (try $ string $ "</" ++ t ++ ">"))
+  case content of
+    Nothing -> char '>' >> return (value, Nothing)
+    x       -> return (value, x)
 
 -- | Parses the output template string
 templateStringParser :: Config -> Parser (String,String,String)
