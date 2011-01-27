@@ -41,16 +41,27 @@ stringParser c = manyTill (textParser c
 
 -- | Parses a maximal string without color markup.
 textParser :: String -> Parser [(String, String)]
-textParser c = do s <- many1 escapeChar
+textParser c = do s <- many1 charParser
                   return [(s, c)]
                   
--- | List of chars to escape               
-charsToEscape :: [Char]                  
-charsToEscape = "<>\\"
-
 -- | Parses escaped characters, in our case just <, > and \
-escapeChar :: Parser Char
-escapeChar = (char '\\' >> (choice $ map char charsToEscape)) <|> noneOf charsToEscape
+charParser :: Parser Char
+charParser = try escapedChar <|> noneOf (map snd charsToEscape)
+
+-- | List of chars to escape               
+charsToEscape :: [(String, Char)]
+charsToEscape = [ ("lt", '<')
+                , ("gt", '>')
+                ]
+
+-- | Returns escaped chars
+escapedChar :: Parser Char
+escapedChar = do
+  char '&'
+  escapeCode <- manyTill anyChar (char ';')
+  case lookup escapeCode charsToEscape of
+    Just c  -> return c
+    Nothing -> unexpected "Unknown escape character."
 
 -- | Parsers a string wrapped in a color specification.
 colorParser :: Parser [(String, String)]
