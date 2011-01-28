@@ -27,7 +27,7 @@ import Commands
 import qualified Data.Map as Map
 import Text.ParserCombinators.Parsec
 import Text.ParserCombinators.Parsec.Perm
-import Control.Monad ( liftM, fail )
+import Control.Monad ( liftM )
 
 type Color = String
 
@@ -41,7 +41,7 @@ data BarFragment = Literal String -- ^ A simple string
 -- | Runs the string parser
 --   Returns [(Fragment, FgColor, BgColor)
 parseString :: Config -> String -> IO [BarFragment]
-parseString c s =
+parseString _ s =
   case parse (manyTill fragmentParser eof) "" s of
     Left  _ -> return $ [Literal ("Could not parse string: " ++ s)]
     Right x -> return x
@@ -49,6 +49,7 @@ parseString c s =
 fragmentParser :: Parser BarFragment
 fragmentParser = choice (map try [ fgColorParser
                                  , bgColorParser
+                                 , fgbgColorParser
                                  , gapParser
                                  ] ++ [stringParser])
 
@@ -77,7 +78,7 @@ fgColorParser :: Parser BarFragment
 fgColorParser = do
   (color, content) <- tagParser "fg"
   case content of
-    Nothing -> return (SetFg color [])
+    Nothing -> fail "The tag \"fg\" must not be closed in place."
     Just fs -> return (SetFg color fs)
 
 -- | Background
@@ -85,16 +86,28 @@ bgColorParser :: Parser BarFragment
 bgColorParser = do
   (color, content) <- tagParser "bg"
   case content of
-    Nothing -> return (SetBg color [])
+    Nothing -> fail "The tag \"bg\" must not be closed in place."
     Just fs -> return (SetBg color fs)
-    
+
+-- | The old foreground and background tag
+fgbgColorParser :: Parser BarFragment
+fgbgColorParser = do
+  (color, content) <- tagParser "fc"
+  case content of
+    Nothing -> fail "The tag \"fc\" must not be closed in place."
+    Just fs -> case color of
+      Just c  -> case break (== ',') c of 
+        (f, ',' : b) -> return (SetFg (Just f) [SetBg (Just b) fs])
+        (f, _)       -> return (SetFg (Just f) [SetBg Nothing fs])
+      Nothing -> return (SetFg Nothing [SetBg Nothing fs])
+
 -- | Spacing
 gapParser :: Parser BarFragment
 gapParser = do
-  (v, c) <- tagParser "p"
+  (mv, c) <- tagParser "p"
   case c of
     Just _ -> fail "The tag \"p\" must be closed in place."
-    Nothing  -> case v of
+    Nothing  -> case mv of
       Nothing -> fail "The tag \"p\" requires a value."
       Just v  -> return (Gap $ read v)
   

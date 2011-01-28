@@ -26,7 +26,7 @@ module Xmobar
     , createWin, updateWin
     -- * Printing
     -- $print
-    , drawInWin, printStrings
+    , drawInWin, printFragment
     ) where
 
 import Prelude hiding (catch)
@@ -231,24 +231,22 @@ updateWin v = do
 -- $print
 
 -- | Draws in and updates the window
-drawInWin :: Rectangle -> [BarFragment] -> X ()
+drawInWin :: Rectangle -> [[BarFragment]] -> X ()
 drawInWin (Rectangle _ _ wid ht) ~[left,center,right] = do
   r <- ask
   let (c,d ) = (config &&& display) r
       (w,fs) = (window &&& fontS  ) r
-      strLn  = io . mapM (\(s,cl) -> textWidth d fs s >>= \tw -> return (s,cl,fi tw))
-  withColors d [bgColor c, borderColor c] $ \[bgcolor, bdcolor] -> do
+      fc     = fgColor c
+      bc     = bgColor c
+  withColors d [borderColor c] $ \[bdcolor] -> do
     gc <- io $ createGC  d w
     -- create a pixmap to write to and fill it with a rectangle
     p <- io $ createPixmap d w wid ht
          (defaultDepthOfScreen (defaultScreenOfDisplay d))
-    -- the fgcolor of the rectangle will be the bgcolor of the window
-    io $ setForeground d gc bgcolor
-    io $ fillRectangle d p gc 0 0 wid ht
-    -- write to the pixmap the new string
-    printStrings p gc fs 1 L =<< strLn left
-    printStrings p gc fs 1 R =<< strLn right
-    printStrings p gc fs 1 C =<< strLn center
+    -- Draw the fragments
+    printFragment p fs gc fc bc 1 L (SetFg Nothing [(SetBg Nothing left)])
+    printFragment p fs gc fc bc 1 R (SetFg Nothing [(SetBg Nothing right)])
+    printFragment p fs gc fc bc 1 C (SetFg Nothing [(SetBg Nothing center)])
     -- draw 1 pixel border if requested
     io $ drawBorder (border c) d p gc bdcolor wid ht
     -- copy the pixmap with the new string to the window
@@ -258,7 +256,6 @@ drawInWin (Rectangle _ _ wid ht) ~[left,center,right] = do
     io $ freePixmap d p
     -- resync
     io $ sync       d True
-
 
 drawBorder :: Border -> Display -> Drawable -> GC -> Pixel
               -> Dimension -> Dimension -> IO ()
@@ -275,27 +272,65 @@ drawBorder b d p gc c wi ht =  case b of
   where sf = setForeground d gc c
         (w, h) = (wi - 1, ht - 1)
 
--- | An easy way to print the stuff we need to print
-printStrings :: Drawable -> GC -> XFont -> Position
-             -> Align -> [(String, String, Position)] -> X ()
-printStrings _ _ _ _ _ [] = return ()
-printStrings dr gc fontst offs a sl@((s,c,l):xs) = do
+
+printFragment :: Drawable -> XFont -> GC -> String -> String
+                 -> Position -> Align -> BarFragment -> X Position
+printFragment dr fontst gc fc bc offs a (Literal s) = do
   r <- ask
-  (as,ds) <- io $ textExtents fontst s
-  let (conf,d)             = (config &&& display) r
-      Rectangle _ _ wid ht = rect r
-      totSLen              = foldr (\(_,_,len) -> (+) len) 0 sl
+  (as, ds) <- io $ textExtents fontst s
+  let (conf, d)                  = (config &&& display) r
+  fWidth <- io $ liftM fi (fragmentWidth d fontst (Literal s))
+  let Rectangle _ _ wid ht = rect r
       valign               = (fi ht + fi (as + ds)) `div` 2 - 1
-      remWidth             = fi wid - fi totSLen
+      remWidth             = fi wid - fWidth
       offset               = case a of
-                               C -> (remWidth + offs) `div` 2
+                               C -> (remWidth + offs) `div` 2 - 1
                                R -> remWidth
                                L -> offs
-      (fc,bc)              = case break (==',') c of
-                               (f,',':b) -> (f, b           )
-                               (f,    _) -> (f, bgColor conf)
   withColors d [bc] $ \[bc'] -> do
     io $ setForeground d gc bc'
-    io $ fillRectangle d dr gc offset 0 (fi l) ht
+    io $ fillRectangle d dr gc offset 0 (fi fWidth) ht
   io $ printString d dr fontst gc fc bc offset valign s
-  printStrings dr gc fontst (offs + l) a xs
+  return fWidth
+printFragment dr fontst gc fc bc offs a (Gap i) = do
+  r <- ask
+  let d                          = display r
+      Rectangle _ _ wid ht = rect r
+      remWidth                   = fi wid - fi i
+      offset                     = case a of
+                                     C -> (remWidth + offs) `div` 2
+                                     R -> remWidth
+                                     L -> offs
+  withColors d [bc] $ \[bc'] -> do
+    io $ setForeground d gc bc'
+    io $ fillRectangle d dr gc offset 0 (fi i) ht
+  return (fi i)
+printFragment dr fontst gc _ bc offs a (SetFg mc xs) = do
+  case mc of
+    Nothing -> do fc <- liftM (fgColor . config) ask
+                  printFrags xs fc 0
+    Just fc -> printFrags xs fc 0
+  where
+    printFrags [] fc offset = return offset
+    printFrags (frag : frags) fc offset = do
+      offs' <- printFragment dr fontst gc fc bc offset a frag
+      printFrags frags fc (offs' + offset)
+printFragment dr fontst gc fc _ offs a (SetBg mc xs) = do
+  case mc of
+    Nothing -> do bc <- liftM (bgColor . config) ask
+                  printFrags xs bc 0
+    Just bc -> printFrags xs bc 0
+  where
+    printFrags [] _ offset = return offset
+    printFrags (frag : frags) bc offset = do
+      offs' <- printFragment dr fontst gc fc bc offset a frag
+      printFrags frags bc (offs' + offset)
+
+fragmentsWidth :: Display -> XFont -> [BarFragment] -> IO Int
+fragmentsWidth d fs frags = liftM sum (mapM (fragmentWidth d fs) frags)
+
+fragmentWidth :: Display -> XFont -> BarFragment -> IO Int
+fragmentWidth d fs (Literal s)     = textWidth d fs s
+fragmentWidth _ _  (Gap i)         = return i
+fragmentWidth d fs (SetFg _ frags) = fragmentsWidth d fs frags
+fragmentWidth d fs (SetBg _ frags) = fragmentsWidth d fs frags
