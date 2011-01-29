@@ -232,12 +232,15 @@ updateWin v = do
 
 -- | Draws in and updates the window
 drawInWin :: Rectangle -> [[BarFragment]] -> X ()
-drawInWin (Rectangle _ _ wid ht) ~[left,center,right] = do
+drawInWin (Rectangle _ _ wid ht) ~[left',center',right'] = do
   r <- ask
   let (c,d ) = (config &&& display) r
       (w,fs) = (window &&& fontS  ) r
       fc     = fgColor c
       bc     = bgColor c
+      left   = SetFg Nothing [SetBg Nothing left']
+      right  = SetFg Nothing [SetBg Nothing right']
+      center = SetFg Nothing [SetBg Nothing center']                               
   withColors d [bc, borderColor c] $ \[bgcolor, bdcolor] -> do
     gc <- io $ createGC  d w
     -- create a pixmap to write to and fill it with a rectangle
@@ -246,10 +249,12 @@ drawInWin (Rectangle _ _ wid ht) ~[left,center,right] = do
     -- the fgcolor of the rectangle will be the bgcolor of the window
     io $ setForeground d gc bgcolor
     io $ fillRectangle d p gc 0 0 wid ht
+    offsR <- io $ liftM (fromInteger . toInteger . (wid -) . fi) $ fragmentWidth d fs right
+    offsC <- io $ liftM (fromInteger . toInteger . (\fw -> (wid - (fi fw)) `div` 2)) $ fragmentWidth d fs center
     -- Draw the fragments
-    printFragment p fs gc fc bc 1 L (SetFg Nothing [(SetBg Nothing left)])
-    printFragment p fs gc fc bc 1 R (SetFg Nothing [(SetBg Nothing right)])
-    printFragment p fs gc fc bc 1 C (SetFg Nothing [(SetBg Nothing center)])
+    printFragment p fs gc fc bc 1 left
+    printFragment p fs gc fc bc offsR right
+    printFragment p fs gc fc bc offsC center
     -- draw 1 pixel border if requested
     io $ drawBorder (border c) d p gc bdcolor wid ht
     -- copy the pixmap with the new string to the window
@@ -277,38 +282,28 @@ drawBorder b d p gc c wi ht =  case b of
 
 
 printFragment :: Drawable -> XFont -> GC -> String -> String
-                 -> Position -> Align -> BarFragment -> X Position
-printFragment dr fontst gc fc bc offs a (Literal s) = do
+                 -> Position -> BarFragment -> X Position
+printFragment dr fontst gc fc bc offs (Literal s) = do
   r <- ask
   (as, ds) <- io $ textExtents fontst s
   let d                    = display r
   fWidth <- io $ liftM fi (fragmentWidth d fontst (Literal s))
-  let Rectangle _ _ wid ht = rect r
+  let Rectangle _ _ _ ht   = rect r
       valign               = (fi ht + fi (as + ds)) `div` 2 - 1
-      remWidth             = fi wid - fWidth
-      offset               = case a of
-                               C -> (remWidth + offs) `div` 2 - 1
-                               R -> remWidth
-                               L -> offs
   withColors d [bc] $ \[bc'] -> do
     io $ setForeground d gc bc'
-    io $ fillRectangle d dr gc offset 0 (fi fWidth) ht
-  io $ printString d dr fontst gc fc bc offset valign s
+    io $ fillRectangle d dr gc offs 0 (fi fWidth) ht
+  io $ printString d dr fontst gc fc bc offs valign s
   return fWidth
-printFragment dr _ gc _ bc offs a (Gap i) = do
+printFragment dr _ gc _ bc offs (Gap i) = do
   r <- ask
-  let d                          = display r
-      Rectangle _ _ wid ht = rect r
-      remWidth                   = fi wid - fi i
-      offset                     = case a of
-                                     C -> (remWidth + offs) `div` 2
-                                     R -> remWidth
-                                     L -> offs
+  let d                    = display r
+      Rectangle _ _ _ ht   = rect r      
   withColors d [bc] $ \[bc'] -> do
     io $ setForeground d gc bc'
-    io $ fillRectangle d dr gc offset 0 (fi i) ht
+    io $ fillRectangle d dr gc offs 0 (fi i) ht
   return (fi i)
-printFragment dr fontst gc _ bc totOffs a (SetFg mc xs) = do
+printFragment dr fontst gc _ bc totOffs (SetFg mc xs) = do
   case mc of
     Nothing -> do fc <- liftM (fgColor . config) ask
                   printFrags xs fc 0
@@ -316,9 +311,9 @@ printFragment dr fontst gc _ bc totOffs a (SetFg mc xs) = do
   where
     printFrags [] _ relOffs = return relOffs
     printFrags (frag : frags) fc relOffs = do
-      relOffs' <- printFragment dr fontst gc fc bc (totOffs + relOffs) a frag
+      relOffs' <- printFragment dr fontst gc fc bc (totOffs + relOffs) frag
       printFrags frags fc (relOffs + relOffs')
-printFragment dr fontst gc fc _ totOffs a (SetBg mc xs) = do
+printFragment dr fontst gc fc _ totOffs (SetBg mc xs) = do
   case mc of
     Nothing -> do bc <- liftM (bgColor . config) ask
                   printFrags xs bc 0
@@ -326,7 +321,7 @@ printFragment dr fontst gc fc _ totOffs a (SetBg mc xs) = do
   where
     printFrags [] _ relOffs = return relOffs
     printFrags (frag : frags) bc relOffs = do
-      relOffs' <- printFragment dr fontst gc fc bc (totOffs + relOffs) a frag
+      relOffs' <- printFragment dr fontst gc fc bc (totOffs + relOffs) frag
       printFrags frags bc (relOffs + relOffs')
 
 fragmentsWidth :: Display -> XFont -> [BarFragment] -> IO Int
