@@ -34,6 +34,7 @@ type Color = String
 -- | The possible content of a "piece" of the bar
 data BarFragment = Literal String -- ^ A simple string
                  | Gap Int        -- ^ Positioning (can be negative)
+                 | Image String   -- ^ A XBM/XPM image
                  | SetFg (Maybe Color) [BarFragment]
                  | SetBg (Maybe Color) [BarFragment]
                  deriving (Show)
