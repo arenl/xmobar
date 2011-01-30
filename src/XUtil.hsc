@@ -28,14 +28,12 @@ module XUtil
     , fi
     , withColors
     , DynPixel(..)
-    , readBitmapFile
     ) where
 
 import Control.Concurrent
 import Control.Monad.Trans
 import Data.IORef
 import Foreign
-import Foreign.C
 import Graphics.X11.Xlib hiding (textExtents, textWidth)
 import qualified Graphics.X11.Xlib as Xlib (textExtents, textWidth)
 import Graphics.X11.Xlib.Extras
@@ -44,6 +42,7 @@ import System.Posix.Types (Fd(..))
 import System.IO
 #if defined XFT || defined UTF8
 # if __GLASGOW_HASKELL__ < 612
+import Foreign.C
 import qualified System.IO.UTF8 as UTF8 (readFile,hGetLine)
 # else
 import qualified System.IO as UTF8 (readFile,hGetLine)

@@ -17,7 +17,7 @@ module Parsers
     ( parseString
     , parseTemplate
     , parseConfig
-    , BarFragment(..)
+    , Fragment(..)
     ) where
 
 import Config
@@ -32,31 +32,35 @@ import Control.Monad ( liftM )
 type Color = String
 
 -- | The possible content of a "piece" of the bar
-data BarFragment = Literal String -- ^ A simple string
-                 | Gap Int        -- ^ Positioning (can be negative)
-                 | Image String   -- ^ A XBM/XPM image
-                 | SetFg (Maybe Color) [BarFragment]
-                 | SetBg (Maybe Color) [BarFragment]
-                 deriving (Show)
+data Fragment = Literal String    -- ^ A simple string
+              | Gap Int           -- ^ Positioning (can be negative)
+              | Image String      -- ^ A XBM/XPM image
+              | Circle Int        -- ^ A circle of radius Int
+              | Rectangle Int Int -- ^ A square of edge Int
+              | SetFg (Maybe Color) [Fragment]
+              | SetBg (Maybe Color) [Fragment]
+              deriving (Show)
                    
 -- | Runs the string parser
 --   Returns [(Fragment, FgColor, BgColor)
-parseString :: Config -> String -> IO [BarFragment]
+parseString :: Config -> String -> IO [Fragment]
 parseString _ s =
   case parse (manyTill fragmentParser eof) "" s of
     Left  _ -> return $ [Literal ("Could not parse string: " ++ s)]
     Right x -> return x
 
-fragmentParser :: Parser BarFragment
+fragmentParser :: Parser Fragment
 fragmentParser = choice (map try [ fgColorParser
                                  , bgColorParser
                                  , fgbgColorParser
                                  , gapParser
                                  , imageParser
+                                 , circleParser
+                                 , rectangleParser
                                  ] ++ [stringParser])
 
 -- | Parses a string
-stringParser :: Parser BarFragment
+stringParser :: Parser Fragment
 stringParser = liftM Literal (many1 (try escapedChar <|>
                                      noneOf (map snd charsToEscape)))
                      
@@ -76,7 +80,7 @@ charsToEscape = [ ("lt", '<')
                 ]
                 
 -- | Foreground
-fgColorParser :: Parser BarFragment
+fgColorParser :: Parser Fragment
 fgColorParser = do
   (color, content) <- tagParser "fg"
   case content of
@@ -84,7 +88,7 @@ fgColorParser = do
     Just fs -> return (SetFg color fs)
 
 -- | Background
-bgColorParser :: Parser BarFragment
+bgColorParser :: Parser Fragment
 bgColorParser = do
   (color, content) <- tagParser "bg"
   case content of
@@ -92,7 +96,7 @@ bgColorParser = do
     Just fs -> return (SetBg color fs)
 
 -- | The old foreground and background tag
-fgbgColorParser :: Parser BarFragment
+fgbgColorParser :: Parser Fragment
 fgbgColorParser = do
   (color, content) <- tagParser "fc"
   case content of
@@ -104,7 +108,7 @@ fgbgColorParser = do
       Nothing -> return (SetFg Nothing [SetBg Nothing fs])
 
 -- | Spacing
-gapParser :: Parser BarFragment
+gapParser :: Parser Fragment
 gapParser = do
   (mv, c) <- tagParser "p"
   case c of
@@ -113,7 +117,7 @@ gapParser = do
       Nothing -> fail "The tag \"p\" requires a value."
       Just v  -> return (Gap $ read v)
 
-imageParser :: Parser BarFragment
+imageParser :: Parser Fragment
 imageParser = do
   (mv, c) <- tagParser "i"
   case c of
@@ -121,10 +125,31 @@ imageParser = do
     Nothing -> case mv of
       Nothing -> fail "The tag \"i\" requires a value."
       Just v  -> return (Image v)
+
+circleParser :: Parser Fragment
+circleParser = do
+  (mv, c) <- tagParser "c"
+  case c of
+    Just _  -> fail "The tag \"c\" must be closed in place."
+    Nothing -> case mv of
+      Nothing -> fail "The tag \"c\" requires a value."
+      Just v  -> return (Image v)
+
+rectangleParser :: Parser Fragment
+rectangleParser = do
+  (mv, c) <- tagParser "r"
+  case c of
+    Just _  -> fail "The tag \"r\" must be closed in place."
+    Nothing -> case mv of
+      Nothing -> fail "The tag \"r\" requires a value."
+      Just v  -> case break (== 'x') v of
+        (w, 'x' : h) -> return (Rectangle (read w) (read h))
+        _            -> fail "Usage of the tag \"r\": <r=WIDTHxHEIGHT/>."
   
+
 -- | Tag parser
 --   Accepts the name of the tag, returns (Value, Maybe Content)
-tagParser :: String -> Parser (Maybe String, Maybe [BarFragment])
+tagParser :: String -> Parser (Maybe String, Maybe [Fragment])
 tagParser t = do
   char '<' >> string t
   value <- liftM Just (char '=' >> tagValue) <|>
