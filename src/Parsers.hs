@@ -52,6 +52,7 @@ fragmentParser = choice (map try [ fgColorParser
                                  , bgColorParser
                                  , fgbgColorParser
                                  , gapParser
+                                 , imageParser
                                  ] ++ [stringParser])
 
 -- | Parses a string
@@ -111,20 +112,30 @@ gapParser = do
     Nothing  -> case mv of
       Nothing -> fail "The tag \"p\" requires a value."
       Just v  -> return (Gap $ read v)
+
+imageParser :: Parser BarFragment
+imageParser = do
+  (mv, c) <- tagParser "i"
+  case c of
+    Just _  -> fail "The tag \"i\" must be closed in place."
+    Nothing -> case mv of
+      Nothing -> fail "The tag \"i\" requires a value."
+      Just v  -> return (Image v)
   
 -- | Tag parser
 --   Accepts the name of the tag, returns (Value, Maybe Content)
 tagParser :: String -> Parser (Maybe String, Maybe [BarFragment])
 tagParser t = do
   char '<' >> string t
-  value <- liftM Just (char '=' >> (manyTill anyChar
-                                    (lookAhead $ char '/' <|> char '>'))) <|>
+  value <- liftM Just (char '=' >> tagValue) <|>
            (lookAhead (char '>') >> return Nothing)
   content <- liftM Just (char '>' >> (manyTill fragmentParser
                                       (try $ string $ "</" ++ t ++ ">"))) <|>
              (string "/>" >> return Nothing)
   return (value, content)
 
+tagValue :: Parser String
+tagValue = manyTill anyChar (lookAhead $ (try (string "/>") >> return '*') <|> char '>')
 
 -- | Parses the output template string
 templateStringParser :: Config -> Parser (String,String,String)
