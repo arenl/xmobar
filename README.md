@@ -154,8 +154,20 @@ For the output template:
 - `%command%` will execute command and print the output. The output
   may contain markups to change the characters' color.
 
-- `<fc=#FF0000>string</fc>` will print `string` with `#FF0000` color
-  (red).
+- `<fg=color>string</fg>` will print `string` with `color`
+  color. Color can be in hexadecimal form (eg. `#FF0000`) or by name.
+- `<bg=color>string</bg>` same as `<fg>`, but affecting the background
+  color.
+- `<fc=fgcolor,bgcolor>string</fc>` modifies the foreground and
+  background color at once.
+- `<i=/path/to/image.xbm/>` prints the image provided, which must be
+  in [X BitMap] format.
+- `<p=pixel_size/>` puts a gap of `pixel_size` size in the bar.
+- `<r=WIDTHxHEIGHT/>` prints a rectangle of `WIDTH` width and `HEIGHT`
+  height.
+- `<c=radius/>` prints a circle of `radius` radius.
+
+[X BitMap]: http://en.wikipedia.org/wiki/X_BitMap
 
 Other configuration options:
 
