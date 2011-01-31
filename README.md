@@ -1,5 +1,5 @@
 % xmobar - A Minimalistic Text Based Status Bar
-% Andrea Rossato, Jose A. Ortega Ruiz
+% Andrea Rossato, Jose A. Ortega Ruiz, Francesco Mazzoli
 
 About
 =====
