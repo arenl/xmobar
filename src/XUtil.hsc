@@ -281,7 +281,7 @@ readBitmapFile display d filename =
                 | otherwise  = Just x_hot
         m_y_hot | y_hot == -1 = Nothing
                 | otherwise  = Just y_hot
-    return (fromIntegral (width), fromIntegral (height), bitmap, m_x_hot, m_y_hot)
+    return (fromIntegral width, fromIntegral height, bitmap, m_x_hot, m_y_hot)
 foreign import ccall unsafe "X11/Xlib.h XReadBitmapFile"
   xReadBitmapFile :: Display -> Drawable -> CString -> Ptr CInt -> Ptr CInt 
                      -> Ptr Pixmap -> Ptr CInt -> Ptr CInt -> IO CInt

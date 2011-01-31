@@ -111,7 +111,12 @@ eventLoop xc@(XConf d _ w fs c) vs = block $ do
                       eventLoop (XConf d r' w' fs c) vs
 
     handle tvar _ (ExposeEvent {}) = runX xc (updateWin tvar)
-
+    
+    handle tvar _ (ButtonEvent { ev_event_type = et
+                               , ev_button     = eb
+                               , ev_x_root     = x
+                               }) = return ()
+    
     handle _ _ _  = return ()
 
 -- $command
@@ -141,7 +146,7 @@ createWin d fs c = do
   let ht    = as + ds + 4
       (r,o) = setPosition (position c) srs (fi ht)
   win <- newWindow  d (defaultScreenOfDisplay d) rootw r o
-  selectInput       d win (exposureMask .|. structureNotifyMask)
+  selectInput       d win (exposureMask .|. structureNotifyMask .|. buttonPressMask)
   setProperties r c d win srs
   when (lowerOnStart c) (lowerWindow d win)
   mapWindow         d win
@@ -336,3 +341,8 @@ fragmentWidth _ _  _  (P.Rectangle w _) = return w
 fragmentWidth _ _  _  (P.Circle rad)    = return rad
 fragmentWidth d dr _  (P.Image f) =
   (io $ readBitmapFile d dr f) >>= (\(w, _, _, _, _) -> return . fi $ w)
+  
+  
+-- $clicks
+
+handleClicks
