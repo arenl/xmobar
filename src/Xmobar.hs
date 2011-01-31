@@ -250,8 +250,8 @@ drawInWin (Rectangle _ _ wid ht) ~[left',center',right'] = do
     -- the fgcolor of the rectangle will be the bgcolor of the window
     io $ setForeground d gc bgcolor
     io $ fillRectangle d p gc 0 0 wid ht
-    offsR <- io $ liftM (fromInteger . toInteger . (wid -) . fi) $ fragmentWidth d fs right
-    offsC <- io $ liftM (fromInteger . toInteger . (\fw -> (wid - (fi fw)) `div` 2)) $ fragmentWidth d fs center
+    offsR <- io $ liftM (fromInteger . toInteger . (wid -) . fi) $ fragmentWidth d p fs right
+    offsC <- io $ liftM (fromInteger . toInteger . (\fw -> (wid - (fi fw)) `div` 2)) $ fragmentWidth d p fs center
     -- Draw the fragments
     printFragment p fs gc fc bc 1 left
     printFragment p fs gc fc bc offsR right
@@ -290,7 +290,7 @@ printFragment dr fontst gc fc bc offs frag = do
   let d                    = display r
       Rectangle _ _ _ ht   = rect r
       valign               = (fi ht + fi (as + ds)) `div` 2 - 1
-  fWidth <- io $ liftM fi (fragmentWidth d fontst frag)
+  fWidth <- io $ liftM fi (fragmentWidth d dr fontst frag)
   withColors d [bc] $ \[bc'] -> do
     io $ setForeground d gc bc'
     io $ fillRectangle d dr gc offs 0 (fi fWidth) ht
@@ -306,6 +306,12 @@ printFragment dr fontst gc fc bc offs frag = do
       io $ setForeground d gc fc'
       io $ fillArc d dr gc offs (ti $ valign - ((as + fi rad) `div` 2))
         (fi rad) (fi rad) 2880 23040
+    (P.Image f) -> withColors d [fc] $ \[fc'] -> do
+      io $ setForeground d gc fc'
+      (w, h, pixmap, _, _) <- io $ readBitmapFile d dr f
+      io $ copyPlane d pixmap dr gc 0 0 w h offs
+        (ti $ valign - ((as + fi h) `div` 2)) 1
+      io $ freePixmap d pixmap
     (P.SetFg mc xs) -> case mc of
       Nothing -> liftM (fgColor . config) ask >>= (\fc' -> printFrags xs fc' bc 0)
       Just fc' -> printFrags xs fc' bc 0 
@@ -320,10 +326,12 @@ printFragment dr fontst gc fc bc offs frag = do
       relOffs' <- printFragment dr fontst gc fc' bc' (offs + relOffs) frag'
       printFrags frags fc' bc' (relOffs + relOffs')
       
-fragmentWidth :: Display -> XFont -> P.Fragment -> IO Int
-fragmentWidth d fs (P.Literal s)     = textWidth d fs s
-fragmentWidth _ _  (P.Gap i)         = return i
-fragmentWidth d fs (P.SetFg _ frags) = liftM sum (mapM (fragmentWidth d fs) frags)
-fragmentWidth d fs (P.SetBg _ frags) = liftM sum (mapM (fragmentWidth d fs) frags)
-fragmentWidth _ _  (P.Rectangle w _) = return w
-fragmentWidth _ _  (P.Circle rad)    = return rad
+fragmentWidth :: Display -> Drawable -> XFont -> P.Fragment -> IO Int
+fragmentWidth d _  fs (P.Literal s)     = textWidth d fs s
+fragmentWidth _ _  _  (P.Gap i)         = return i
+fragmentWidth d dr fs (P.SetFg _ frags) = liftM sum (mapM (fragmentWidth d dr fs) frags)
+fragmentWidth d dr fs (P.SetBg _ frags) = liftM sum (mapM (fragmentWidth d dr fs) frags)
+fragmentWidth _ _  _  (P.Rectangle w _) = return w
+fragmentWidth _ _  _  (P.Circle rad)    = return rad
+fragmentWidth d dr _  (P.Image f) =
+  (io $ readBitmapFile d dr f) >>= (\(w, _, _, _, _) -> return . fi $ w)
