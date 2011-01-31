@@ -4,6 +4,7 @@
 -- Module      :  Xmobar.Parsers
 -- Copyright   :  (c) Andrea Rossato
 -- License     :  BSD-style (see LICENSE)
+-- New printing/parsing system by Francesco Mazzoli <f@mazzo.li>
 --
 -- Maintainer  :  Jose A. Ortega Ruiz <jao@gnu.org>
 -- Stability   :  unstable
