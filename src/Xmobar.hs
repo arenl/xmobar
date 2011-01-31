@@ -284,68 +284,28 @@ drawBorder b d p gc c wi ht =  case b of
 
 printFragment :: Drawable -> XFont -> GC -> String -> String
                  -> Position -> P.Fragment -> X Position
-printFragment dr fontst gc fc bc offs (P.Literal s) = do
+printFragment dr fontst gc fc bc offs frag = do
   r <- ask
   (as, ds) <- io $ textExtents fontst s
   let d                    = display r
-  fWidth <- io $ liftM fi (fragmentWidth d fontst (P.Literal s))
   let Rectangle _ _ _ ht   = rect r
       valign               = (fi ht + fi (as + ds)) `div` 2 - 1
+  fWidth <- io $ liftM fi (fragmentWidth d fontst frag)
   withColors d [bc] $ \[bc'] -> do
     io $ setForeground d gc bc'
     io $ fillRectangle d dr gc offs 0 (fi fWidth) ht
-  io $ printString d dr fontst gc fc bc offs valign s
+  case frag of
+    (P.Literal s) -> do
+      io $ printString d dr fontst gc fc bc offs valign s
+    (P.Gap _) -> return ()
+    (P.Rectangle) -> withColors d [fc] $ \[fc'] -> do
+      io $ setForeground d gc fc'
+      io $ fillRectangle d dr gc offs (fromInteger $ toInteger valign) (fi w) (fi h)
+    (P.Circle) -> withColors d [fc] $ \[fc'] -> do
+      io $ setForeground d gc fc'
+      io $ fillArc d dr gc offs (fromInteger $ toInteger valign)
+        (fi rad) (fi rad) 2880 23040      
   return fWidth
-printFragment dr _ gc _ bc offs (P.Gap i) = do
-  r <- ask
-  let d                    = display r
-      Rectangle _ _ _ ht   = rect r      
-  withColors d [bc] $ \[bc'] -> do
-    io $ setForeground d gc bc'
-    io $ fillRectangle d dr gc offs 0 (fi i) ht
-  return (fi i)
-printFragment dr _ gc fc bc offs (P.Rectangle w h) = do
-  r <- ask
-  let d                    = display r
-      Rectangle _ _ _ ht   = rect r      
-      valign               = (ht - fi h) `div` 2 - 1
-  withColors d [fc, bc] $ \[fc', bc'] -> do
-    io $ setForeground d gc bc'
-    io $ fillRectangle d dr gc offs 0 (fi w) ht
-    io $ setForeground d gc fc'
-    io $ fillRectangle d dr gc offs (fromInteger $ toInteger valign) (fi w) (fi h)    
-  return (fi w)
-printFragment dr _ gc fc bc offs (P.Circle rad) = do
-  r <- ask
-  let d                    = display r
-      Rectangle _ _ _ ht   = rect r      
-      valign               = (ht - fi rad) `div` 2 - 1
-  withColors d [fc, bc] $ \[fc', bc'] -> do
-    io $ setForeground d gc bc'
-    io $ fillRectangle d dr gc offs 0 (fi rad) ht
-    io $ setForeground d gc fc'
-    io $ fillArc d dr gc offs (fromInteger $ toInteger valign) (fi rad) (fi rad) 2880 23040    
-  return (fi rad)
-printFragment dr fontst gc _ bc totOffs (P.SetFg mc xs) = do
-  case mc of
-    Nothing -> do fc <- liftM (fgColor . config) ask
-                  printFrags xs fc 0
-    Just fc -> printFrags xs fc 0
-  where
-    printFrags [] _ relOffs = return relOffs
-    printFrags (frag : frags) fc relOffs = do
-      relOffs' <- printFragment dr fontst gc fc bc (totOffs + relOffs) frag
-      printFrags frags fc (relOffs + relOffs')
-printFragment dr fontst gc fc _ totOffs (P.SetBg mc xs) = do
-  case mc of
-    Nothing -> do bc <- liftM (bgColor . config) ask
-                  printFrags xs bc 0
-    Just bc -> printFrags xs bc 0
-  where
-    printFrags [] _ relOffs = return relOffs
-    printFrags (frag : frags) bc relOffs = do
-      relOffs' <- printFragment dr fontst gc fc bc (totOffs + relOffs) frag
-      printFrags frags bc (relOffs + relOffs')
 
 fragmentWidth :: Display -> XFont -> P.Fragment -> IO Int
 fragmentWidth d fs (P.Literal s)     = textWidth d fs s
