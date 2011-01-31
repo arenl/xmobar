@@ -286,9 +286,9 @@ printFragment :: Drawable -> XFont -> GC -> String -> String
                  -> Position -> P.Fragment -> X Position
 printFragment dr fontst gc fc bc offs frag = do
   r <- ask
-  (as, ds) <- io $ textExtents fontst s
+  (as, ds) <- io $ textExtents fontst ['A'..'z']
   let d                    = display r
-  let Rectangle _ _ _ ht   = rect r
+      Rectangle _ _ _ ht   = rect r
       valign               = (fi ht + fi (as + ds)) `div` 2 - 1
   fWidth <- io $ liftM fi (fragmentWidth d fontst frag)
   withColors d [bc] $ \[bc'] -> do
@@ -298,15 +298,28 @@ printFragment dr fontst gc fc bc offs frag = do
     (P.Literal s) -> do
       io $ printString d dr fontst gc fc bc offs valign s
     (P.Gap _) -> return ()
-    (P.Rectangle) -> withColors d [fc] $ \[fc'] -> do
+    (P.Rectangle w h) -> withColors d [fc] $ \[fc'] -> do
       io $ setForeground d gc fc'
-      io $ fillRectangle d dr gc offs (fromInteger $ toInteger valign) (fi w) (fi h)
-    (P.Circle) -> withColors d [fc] $ \[fc'] -> do
+      io $ fillRectangle d dr gc offs
+        (ti $ valign - ((as + fi h) `div` 2)) (fi w) (fi h)
+    (P.Circle rad) -> withColors d [fc] $ \[fc'] -> do
       io $ setForeground d gc fc'
-      io $ fillArc d dr gc offs (fromInteger $ toInteger valign)
-        (fi rad) (fi rad) 2880 23040      
+      io $ fillArc d dr gc offs (ti $ valign - ((as + fi rad) `div` 2))
+        (fi rad) (fi rad) 2880 23040
+    (P.SetFg mc xs) -> case mc of
+      Nothing -> liftM (fgColor . config) ask >>= (\fc' -> printFrags xs fc' bc 0)
+      Just fc' -> printFrags xs fc' bc 0 
+    (P.SetBg mc xs) -> case mc of
+      Nothing -> liftM (bgColor . config) ask >>= (\bc' -> printFrags xs fc bc' 0)
+      Just bc' -> printFrags xs fc bc' 0    
   return fWidth
-
+  where
+    ti = fromInteger . toInteger
+    printFrags []              _   _   _       = return ()
+    printFrags (frag' : frags) fc' bc' relOffs = do
+      relOffs' <- printFragment dr fontst gc fc' bc' (offs + relOffs) frag'
+      printFrags frags fc' bc' (relOffs + relOffs')
+      
 fragmentWidth :: Display -> XFont -> P.Fragment -> IO Int
 fragmentWidth d fs (P.Literal s)     = textWidth d fs s
 fragmentWidth _ _  (P.Gap i)         = return i
