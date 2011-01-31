@@ -4,6 +4,7 @@
 -- Module      :  XUtil
 -- Copyright   :  (C) 2007 Andrea Rossato
 -- License     :  BSD3
+-- readBitmapFile interface by Francesco Mazzoli <f@mazzo.li>
 --
 -- Maintainer  :  andrea.rossato@unitn.it
 -- Stability   :  unstable
