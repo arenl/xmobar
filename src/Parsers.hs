@@ -133,7 +133,7 @@ circleParser = do
     Just _  -> fail "The tag \"c\" must be closed in place."
     Nothing -> case mv of
       Nothing -> fail "The tag \"c\" requires a value."
-      Just v  -> return (Image v)
+      Just v  -> return (Circle $ read v)
 
 rectangleParser :: Parser Fragment
 rectangleParser = do

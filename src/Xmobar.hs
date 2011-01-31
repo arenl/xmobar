@@ -290,7 +290,7 @@ printFragment dr fontst gc fc bc offs (P.Literal s) = do
   let d                    = display r
   fWidth <- io $ liftM fi (fragmentWidth d fontst (P.Literal s))
   let Rectangle _ _ _ ht   = rect r
-      valign               = (fi ht + fi (as)) `div` 2 - 1
+      valign               = (fi ht + fi (as + ds)) `div` 2 - 1
   withColors d [bc] $ \[bc'] -> do
     io $ setForeground d gc bc'
     io $ fillRectangle d dr gc offs 0 (fi fWidth) ht
@@ -315,6 +315,17 @@ printFragment dr _ gc fc bc offs (P.Rectangle w h) = do
     io $ setForeground d gc fc'
     io $ fillRectangle d dr gc offs (fromInteger $ toInteger valign) (fi w) (fi h)    
   return (fi w)
+printFragment dr _ gc fc bc offs (P.Circle rad) = do
+  r <- ask
+  let d                    = display r
+      Rectangle _ _ _ ht   = rect r      
+      valign               = (ht - fi rad) `div` 2 - 1
+  withColors d [fc, bc] $ \[fc', bc'] -> do
+    io $ setForeground d gc bc'
+    io $ fillRectangle d dr gc offs 0 (fi rad) ht
+    io $ setForeground d gc fc'
+    io $ fillArc d dr gc offs (fromInteger $ toInteger valign) (fi rad) (fi rad) 2880 23040    
+  return (fi rad)
 printFragment dr fontst gc _ bc totOffs (P.SetFg mc xs) = do
   case mc of
     Nothing -> do fc <- liftM (fgColor . config) ask
@@ -342,6 +353,7 @@ fragmentWidth _ _  (P.Gap i)         = return i
 fragmentWidth d fs (P.SetFg _ frags) = fragmentsWidth d fs frags
 fragmentWidth d fs (P.SetBg _ frags) = fragmentsWidth d fs frags
 fragmentWidth _ _  (P.Rectangle w _) = return w
+fragmentWidth _ _  (P.Circle rad)    = return rad
 
 fragmentsWidth :: Display -> XFont -> [P.Fragment] -> IO Int
 fragmentsWidth d fs frags = liftM sum (mapM (fragmentWidth d fs) frags)
