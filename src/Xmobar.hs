@@ -323,10 +323,7 @@ printFragment dr fontst gc fc bc offs frag = do
 fragmentWidth :: Display -> XFont -> P.Fragment -> IO Int
 fragmentWidth d fs (P.Literal s)     = textWidth d fs s
 fragmentWidth _ _  (P.Gap i)         = return i
-fragmentWidth d fs (P.SetFg _ frags) = fragmentsWidth d fs frags
-fragmentWidth d fs (P.SetBg _ frags) = fragmentsWidth d fs frags
+fragmentWidth d fs (P.SetFg _ frags) = liftM sum (mapM (fragmentWidth d fs) frags)
+fragmentWidth d fs (P.SetBg _ frags) = liftM sum (mapM (fragmentWidth d fs) frags)
 fragmentWidth _ _  (P.Rectangle w _) = return w
 fragmentWidth _ _  (P.Circle rad)    = return rad
-
-fragmentsWidth :: Display -> XFont -> [P.Fragment] -> IO Int
-fragmentsWidth d fs frags = liftM sum (mapM (fragmentWidth d fs) frags)
