@@ -57,9 +57,6 @@ flag with_alsa
   description: Use alsa-mixer to get the volume from soundcards.
   default: False
 
-flag with_dbus
- description: Adds dbus support.
-
 executable xmobar
     hs-source-dirs:     src
     main-is:            Main.hs
@@ -121,7 +118,3 @@ executable xmobar
        build-depends: alsa-mixer == 0.1.*
        other-modules: Plugins.Monitors.Volume
        cpp-options: -DALSA
-
-    if flag(with_dbus) || flag(all_extensions)
-       build-depends: dbus-client >= 0.4.0.3
-       cpp-options: -DDBUS
