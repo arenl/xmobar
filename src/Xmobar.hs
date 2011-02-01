@@ -344,5 +344,3 @@ fragmentWidth d dr _  (P.Image f) =
   
   
 -- $clicks
-
-handleClicks
