@@ -112,11 +112,6 @@ eventLoop xc@(XConf d _ w fs c) vs = block $ do
 
     handle tvar _ (ExposeEvent {}) = runX xc (updateWin tvar)
     
-    handle tvar _ (ButtonEvent { ev_event_type = et
-                               , ev_button     = eb
-                               , ev_x_root     = x
-                               }) = return ()
-    
     handle _ _ _  = return ()
 
 -- $command
@@ -146,7 +141,7 @@ createWin d fs c = do
   let ht    = as + ds + 4
       (r,o) = setPosition (position c) srs (fi ht)
   win <- newWindow  d (defaultScreenOfDisplay d) rootw r o
-  selectInput       d win (exposureMask .|. structureNotifyMask .|. buttonPressMask)
+  selectInput       d win (exposureMask .|. structureNotifyMask)
   setProperties r c d win srs
   when (lowerOnStart c) (lowerWindow d win)
   mapWindow         d win
