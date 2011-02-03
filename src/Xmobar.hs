@@ -309,10 +309,13 @@ printFragment dr fontst gc fc bc offs frag = do
         (fi rad) (fi rad) 2880 23040
     (P.Image f) -> withColors d [fc] $ \[fc'] -> do
       io $ setForeground d gc fc'
-      (w, h, pixmap, _, _) <- io $ readBitmapFile d dr f
-      io $ copyPlane d pixmap dr gc 0 0 w h offs
-        (ti $ valign - ((as + fi h) `div` 2)) 1
-      io $ freePixmap d pixmap
+      bf <- io $ readBitmapFile d dr f
+      case bf of
+        Just (w, h, pixmap, _, _) -> do
+          io $ copyPlane d pixmap dr gc 0 0 w h offs 
+            (ti $ valign - ((as + fi h) `div` 2)) 1
+          io $ freePixmap d pixmap
+        Nothing -> return ()
     (P.SetFg mc xs) -> case mc of
       Nothing -> liftM (fgColor . config) ask >>= (\fc' -> printFrags xs fc' bc 0)
       Just fc' -> printFrags xs fc' bc 0 
@@ -334,8 +337,10 @@ fragmentWidth d dr fs (P.SetFg _ frags) = liftM sum (mapM (fragmentWidth d dr fs
 fragmentWidth d dr fs (P.SetBg _ frags) = liftM sum (mapM (fragmentWidth d dr fs) frags)
 fragmentWidth _ _  _  (P.Rectangle w _) = return w
 fragmentWidth _ _  _  (P.Circle rad)    = return rad
-fragmentWidth d dr _  (P.Image f) =
-  (io $ readBitmapFile d dr f) >>= (\(w, _, _, _, _) -> return . fi $ w)
-  
+fragmentWidth d dr _  (P.Image f) = do
+  bf <- io $ readBitmapFile d dr f
+  case bf of
+    Nothing -> return 0
+    Just (w, _, _, _, _) -> return . fi $ w  
   
 -- $clicks
