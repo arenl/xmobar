@@ -307,8 +307,9 @@ printFragment dr fontst gc fc bc offs frag = do
       io $ setForeground d gc fc'
       io $ fillArc d dr gc offs (ti $ valign - ((as + fi rad) `div` 2))
         (fi rad) (fi rad) 2880 23040
-    (P.Image f) -> withColors d [fc] $ \[fc'] -> do
+    (P.Image f) -> withColors d [fc, bc] $ \[fc', bc'] -> do
       io $ setForeground d gc fc'
+      io $ setBackground d gc bc'
       bf <- io $ readBitmapFile d dr f
       case bf of
         Just (w, h, pixmap, _, _) -> do
