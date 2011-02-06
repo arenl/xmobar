@@ -51,34 +51,21 @@ parseString _ s =
     Right x -> return x
 
 fragmentParser :: Parser Fragment
-fragmentParser = choice (map try [ fgColorParser
-                                 , bgColorParser
-                                 , fgbgColorParser
-                                 , gapParser
-                                 , imageParser
-                                 , circleParser
-                                 , rectangleParser
-                                 ] ++ [stringParser])
+fragmentParser = tagsParser <|> (char '<' >> return (Literal "<")) <|> stringParser
 
--- | Parses a string
+tagsParser :: Parser Fragment
+tagsParser = choice (map try [ fgColorParser
+                             , bgColorParser
+                             , fgbgColorParser
+                             , gapParser
+                             , imageParser
+                             , circleParser
+                             , rectangleParser
+                             ])
+
+-- | String parser
 stringParser :: Parser Fragment
-stringParser = liftM Literal (many1 (try escapedChar <|>
-                                     noneOf (map snd charsToEscape)))
-                     
--- | Returns escaped chars
-escapedChar :: Parser Char
-escapedChar = do
-  char '&'
-  escapeCode <- manyTill anyChar (char ';')
-  case lookup escapeCode charsToEscape of
-    Just c  -> return c
-    Nothing -> fail "Unknown escape character."
-
--- | List of chars to escape               
-charsToEscape :: [(String, Char)]
-charsToEscape = [ ("lt", '<')
-                , ("gt", '>')
-                ]
+stringParser = liftM Literal $ many1 $ noneOf "<"
                 
 -- | Foreground
 fgColorParser :: Parser Fragment
