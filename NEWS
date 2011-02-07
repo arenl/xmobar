@@ -7,6 +7,8 @@ _New features_
 
   - New `Volume` monitor displaying ALSA soundcards information, by
     Thomas Tuegel.
+  - xmobar app new has WM_CLASS, WM_NAME and _NET_WM_PID xprops
+    ([issue 38]).
 
 _Incompatible changes_
 
@@ -31,6 +33,7 @@ _Bug fixes_
 [issue 28]: http://code.google.com/p/xmobar/issues/detail?id=28
 [issue 30]: http://code.google.com/p/xmobar/issues/detail?id=30
 [issue 36]: http://code.google.com/p/xmobar/issues/detail?id=36
+[issue 38]: http://code.google.com/p/xmobar/issues/detail?id=38
 
 ## Version 0.12 (Dec 24, 2010)
 

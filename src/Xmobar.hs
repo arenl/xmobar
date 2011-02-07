@@ -43,6 +43,7 @@ import Control.Exception hiding (handle)
 import Data.Bits
 import Data.Maybe(fromMaybe)
 import Data.Typeable (Typeable)
+import System.Posix.Process (getProcessID)
 
 import Config
 import Parsers hiding ( Fragment(..) )
@@ -183,9 +184,16 @@ setProperties r c d w srs = do
   a2 <- internAtom d "_NET_WM_WINDOW_TYPE"      False
   c2 <- internAtom d "ATOM"                     False
   v  <- internAtom d "_NET_WM_WINDOW_TYPE_DOCK" False
+  p  <- internAtom d "_NET_WM_PID"              False
+
+  setTextProperty d w "xmobar" wM_CLASS
+  setTextProperty d w "xmobar" wM_NAME
+
   changeProperty32 d w a1 c1 propModeReplace $ map fi $
     getStrutValues r (position c) (getRootWindowHeight srs)
   changeProperty32 d w a2 c2 propModeReplace [fromIntegral v]
+
+  getProcessID >>= changeProperty32 d w p c1 propModeReplace . return . fromIntegral
 
 getRootWindowHeight :: [Rectangle] -> Int
 getRootWindowHeight srs = foldr1 max (map getMaxScreenYCoord srs)
