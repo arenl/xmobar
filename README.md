@@ -975,11 +975,11 @@ code] or send mail to our [Mailing list].
 Credits
 =======
 
-xmobar [incorporates patches] from Ben Boeckel, Roman Cheplyaka, John
-Goerzen, Juraj Hercek, Tomas Janousek, Spencer Janssen, Krzysztof
-Kosciuszkiewicz, Lennart Kolmodin, Dmitry Kurochkin, Svein Ove, Jens
+xmobar [incorporates patches] by Ben Boeckel, Roman Cheplyaka, John
+Goerzen, Juraj Hercek, Tomas Janousek, Spencer Janssen, Lennart
+Kolmodin, Krzysztof Kosciuszkiewicz, Dmitry Kurochkin, Svein Ove, Jens
 Petersen, Petr Rockai, Andrew Sackville-West, Alexander Solovyov,
-Thomas Tuegel, Sergei Trofimovich, Jan Vornberger, Daniel Wagner and
+Sergei Trofimovich, Thomas Tuegel, Jan Vornberger, Daniel Wagner and
 Norbert Zeh.
 
 [incorporates patches]: http://www.ohloh.net/p/xmobar/contributors
