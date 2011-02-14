@@ -1,7 +1,7 @@
 -----------------------------------------------------------------------------
 -- |
 -- Module      :  Plugins.Monitors.Disk
--- Copyright   :  (c) Jose A Ortega Ruiz
+-- Copyright   :  (c) 2010, 2011 Jose A Ortega Ruiz
 -- License     :  BSD-style (see LICENSE)
 --
 -- Maintainer  :  Jose A Ortega Ruiz <jao@gnu.org>
@@ -12,12 +12,12 @@
 --
 -----------------------------------------------------------------------------
 
-module Plugins.Monitors.Disk ( diskUConfig, runDiskU
-                             , diskIOConfig, runDiskIO
-                             ) where
+module Plugins.Monitors.Disk (diskUConfig, runDiskU, startDiskIO) where
 
 import Plugins.Monitors.Common
 import StatFS
+
+import Data.IORef (IORef, newIORef, readIORef, writeIORef)
 
 import Control.Monad (zipWithM)
 import qualified Data.ByteString.Lazy.Char8 as B
@@ -33,6 +33,7 @@ diskUConfig = mkMConfig ""
 
 type DevName = String
 type Path = String
+type DevDataRef = IORef [(DevName, [Float])]
 
 mountedDevices :: [String] -> IO [(DevName, Path)]
 mountedDevices req = do
@@ -52,9 +53,11 @@ diskData = do
   let extract ws = (head ws, map read (tail ws))
   return $ map (extract . map B.unpack . drop 2 . B.words) (B.lines s)
 
-mountedData :: [DevName] -> IO [(DevName, [Float])]
-mountedData devs = do
-  (dt, dt') <- doActionTwiceWithDelay 750000 diskData
+mountedData :: DevDataRef -> [DevName] -> IO [(DevName, [Float])]
+mountedData dref devs = do
+  dt <- readIORef dref
+  dt' <- diskData
+  writeIORef dref dt'
   return $ map (parseDev (zipWith diff dt' dt)) devs
   where diff (dev, xs) (_, ys) = (dev, zipWith (-) xs ys)
 
@@ -110,12 +113,20 @@ runDiskIO' (tmp, xs) = do
   setConfigValue tmp template
   parseTemplate $ s ++ b
 
-runDiskIO :: [(String, String)] -> [String] -> Monitor String
-runDiskIO disks _ = do
+runDiskIO :: DevDataRef -> [(String, String)] -> [String] -> Monitor String
+runDiskIO dref disks _ = do
   mounted <- io $ mountedDevices (map fst disks)
-  dat <- io $ mountedData (map fst mounted)
+  dat <- io $ mountedData dref (map fst mounted)
   strs <- mapM runDiskIO' $ devTemplates disks mounted dat
   return $ intercalate " " strs
+
+startDiskIO :: [(String, String)] ->
+               [String] -> Int -> (String -> IO ()) -> IO ()
+startDiskIO disks args rate cb = do
+  mounted <- mountedDevices (map fst disks)
+  dref <- newIORef (map (\d -> (fst d, repeat 0)) mounted)
+  _ <- mountedData dref (map fst mounted)
+  runM args diskIOConfig (runDiskIO dref disks) rate cb
 
 runDiskU' :: String -> String -> Monitor String
 runDiskU' tmp path = do

@@ -12,11 +12,12 @@
 --
 -----------------------------------------------------------------------------
 
-module Plugins.Monitors.MultiCpu(multiCpuConfig, runMultiCpu) where
+module Plugins.Monitors.MultiCpu (startMultiCpu) where
 
 import Plugins.Monitors.Common
 import qualified Data.ByteString.Lazy.Char8 as B
 import Data.List (isPrefixOf, transpose, unfoldr)
+import Data.IORef (IORef, newIORef, readIORef, writeIORef)
 
 multiCpuConfig :: IO MConfig
 multiCpuConfig =
@@ -26,6 +27,7 @@ multiCpuConfig =
                          , k <- monitors]
     where monitors = ["bar","total","user","nice","system","idle"]
 
+type CpuDataRef = IORef [[Float]]
 
 cpuData :: IO [[Float]]
 cpuData = parse `fmap` B.readFile "/proc/stat"
@@ -35,9 +37,11 @@ cpuData = parse `fmap` B.readFile "/proc/stat"
         isCpu _ = False
         parseList = map (parseFloat . B.unpack) . tail
 
-parseCpuData :: IO [[Float]]
-parseCpuData =
-  do (as, bs) <- doActionTwiceWithDelay 950000 cpuData
+parseCpuData :: CpuDataRef -> IO [[Float]]
+parseCpuData cref =
+  do as <- readIORef cref
+     bs <- cpuData
+     writeIORef cref bs
      let p0 = zipWith percent bs as
      return p0
 
@@ -68,9 +72,15 @@ formatAutoCpus :: [String] -> Monitor [String]
 formatAutoCpus [] = return $ replicate 6 ""
 formatAutoCpus xs = return $ map unwords (groupData xs)
 
-runMultiCpu :: [String] -> Monitor String
-runMultiCpu _ =
-  do c <- io parseCpuData
+runMultiCpu :: CpuDataRef -> [String] -> Monitor String
+runMultiCpu cref _ =
+  do c <- io $ parseCpuData cref
      l <- formatMultiCpus c
      a <- formatAutoCpus l
      parseTemplate $ a ++ l
+
+startMultiCpu :: [String] -> Int -> (String -> IO ()) -> IO ()
+startMultiCpu a r cb = do
+  cref <- newIORef [[]]
+  _ <- parseCpuData cref
+  runM a multiCpuConfig (runMultiCpu cref) r cb

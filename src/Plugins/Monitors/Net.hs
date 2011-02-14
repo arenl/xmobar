@@ -1,7 +1,8 @@
 -----------------------------------------------------------------------------
 -- |
 -- Module      :  Plugins.Monitors.Net
--- Copyright   :  (c) Andrea Rossato
+-- Copyright   :  (c) 2011 Jose Antonio Ortega Ruiz
+--                (c) 2007-2010 Andrea Rossato
 -- License     :  BSD-style (see LICENSE)
 --
 -- Maintainer  :  Jose A. Ortega Ruiz <jao@gnu.org>
@@ -12,9 +13,13 @@
 --
 -----------------------------------------------------------------------------
 
-module Plugins.Monitors.Net (netConfig, runNet) where
+module Plugins.Monitors.Net (startNet) where
 
 import Plugins.Monitors.Common
+
+import Data.IORef (IORef, newIORef, readIORef, writeIORef)
+import Data.Time.Clock (UTCTime, getCurrentTime, diffUTCTime)
+
 import qualified Data.ByteString.Lazy.Char8 as B
 
 data NetDev = NA
@@ -23,8 +28,7 @@ data NetDev = NA
                  , netTx :: Float
                  } deriving (Eq,Show,Read)
 
-interval :: Int
-interval = 500000
+type NetDevRef = IORef (NetDev, UTCTime)
 
 netConfig :: IO MConfig
 netConfig = mkMConfig
@@ -49,14 +53,19 @@ wordsBy f s = case dropWhile f s of
 readNetDev :: [String] -> NetDev
 readNetDev [] = NA
 readNetDev xs =
-    ND (xs !! 0) (r (xs !! 1)) (r (xs !! 2))
+    ND (head xs) (r (xs !! 1)) (r (xs !! 2))
        where r s | s == "" = 0
                  | otherwise = read s / 1024
 
-fileNET :: IO [NetDev]
-fileNET =
-    do f <- B.readFile "/proc/net/dev"
-       return $ netParser f
+fileNet :: IO [NetDev]
+fileNet = netParser `fmap` B.readFile "/proc/net/dev"
+
+findNetDev :: String -> IO NetDev
+findNetDev dev = do
+  nds <- fileNet
+  case filter (\d -> netDev d == dev) nds of
+    x:_ -> return x
+    _ -> return NA
 
 netParser :: B.ByteString -> [NetDev]
 netParser =
@@ -78,19 +87,26 @@ printNet nd =
                         parseTemplate [d,rx,tx,rb,tb]
          NA -> return "N/A"
 
-parseNET :: String -> IO [NetDev]
-parseNET nd =
-    do (a,b) <- doActionTwiceWithDelay interval fileNET
-       let netRate f da db = takeDigits 2 $ (f db - f da) * fromIntegral (1000000 `div` interval)
-           diffRate (da,db) = ND (netDev da)
-                              (netRate netRx da db)
-                              (netRate netTx da db)
-       return $ filter (\d -> netDev d == nd) $ map diffRate $ zip a b
+parseNet :: NetDevRef -> String -> IO NetDev
+parseNet nref nd = do
+  (n0, t0) <- readIORef nref
+  n1 <- findNetDev nd
+  t1 <- getCurrentTime
+  writeIORef nref (n1, t1)
+  let scx = realToFrac (diffUTCTime t1 t0)
+      scx' = if scx > 0 then scx else 1
+      netRate f da db = takeDigits 2 $ (f db - f da) / scx'
+      diffRate NA _ = NA
+      diffRate _ NA = NA
+      diffRate da db = ND nd (netRate netRx da db) (netRate netTx da db)
+  return $ diffRate n0 n1
 
-runNet :: [String] -> Monitor String
-runNet nd =
-    do pn <- io $ parseNET $ head nd
-       n <- case pn of
-              [x] -> return x
-              _ -> return NA
-       printNet n
+runNet :: NetDevRef -> String -> [String] -> Monitor String
+runNet nref i _ = io (parseNet nref i) >>= printNet
+
+startNet :: String -> [String] -> Int -> (String -> IO ()) -> IO ()
+startNet i a r cb = do
+  t0 <- getCurrentTime
+  nref <- newIORef (NA, t0)
+  _ <- parseNet nref i
+  runM a netConfig (runNet nref i) r cb

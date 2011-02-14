@@ -12,7 +12,7 @@ xmobar was inspired by the [Ion3] status bar, and supports similar
 features, like dynamic color management, output templates, and
 extensibility through plugins.
 
-This page documents xmobar 0.12 (see [release notes]).
+This page documents xmobar 0.13 (see [release notes]).
 
 [This is a screen shot] of Andrea's desktop with [xmonad] and xmobar.
 [This] is xmobar running under [sawfish], with antialiased fonts. And

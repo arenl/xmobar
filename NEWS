@@ -1,7 +1,7 @@
 % xmobar - Release notes
 % Jose A. Ortega Ruiz
 
-## Version 0.12.1
+## Version 0.13
 
 _New features_
 
@@ -25,6 +25,10 @@ _Bug fixes_
   - [issue 30]: `Mail` plugin can be specified anywhere in commands list.
   - [issue 36]: Battery monitor now supports non-standard locations of
     the `/sys/class/power_supply/AC/online` file.
+  - [issue 40]: Battery monitor now supports the new power_now, that
+    replaces current_now in linux kernels for v. 2.36 and above.
+  - [issue 42]: More accurate net monitor rates.
+  - DiskIO, Cpu and MultiCpu monitors are also more accurate now.
   - Text is now correctly centered vertically.
   - `FullBM` border spec fixed.
 
@@ -34,13 +38,15 @@ _Bug fixes_
 [issue 30]: http://code.google.com/p/xmobar/issues/detail?id=30
 [issue 36]: http://code.google.com/p/xmobar/issues/detail?id=36
 [issue 38]: http://code.google.com/p/xmobar/issues/detail?id=38
+[issue 40]: http://code.google.com/p/xmobar/issues/detail?id=40
+[issue 42]: http://code.google.com/p/xmobar/issues/detail?id=42
 
 ## Version 0.12 (Dec 24, 2010)
 
 xmobar has a new [maintainer], a new [website], a new [mailing
 list] and uses a new [source code repository].
 
-Many thanks to Andrea Rossato, xombar's author and maintainer so far,
+Many thanks to Andrea Rossato, xmobar's author and maintainer so far,
 for creating xmobar in the first place, and for giving me the chance
 to become its maintainer. And a big thanks to Ben Boeckel, Petr Rockai
 and Norbert Zeh for their patches.

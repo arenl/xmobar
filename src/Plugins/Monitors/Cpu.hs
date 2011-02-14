@@ -1,7 +1,8 @@
 -----------------------------------------------------------------------------
 -- |
 -- Module      :  Plugins.Monitors.Cpu
--- Copyright   :  (c) Andrea Rossato
+-- Copyright   :  (c) 2011 Jose Antonio Ortega Ruiz
+--                (c) 2007-2010 Andrea Rossato
 -- License     :  BSD-style (see LICENSE)
 --
 -- Maintainer  :  Jose A. Ortega Ruiz <jao@gnu.org>
@@ -12,27 +13,30 @@
 --
 -----------------------------------------------------------------------------
 
-module Plugins.Monitors.Cpu where
+module Plugins.Monitors.Cpu (startCpu) where
 
 import Plugins.Monitors.Common
 import qualified Data.ByteString.Lazy.Char8 as B
+import Data.IORef (IORef, newIORef, readIORef, writeIORef)
 
 cpuConfig :: IO MConfig
 cpuConfig = mkMConfig
        "Cpu: <total>%"
        ["bar","total","user","nice","system","idle"]
 
+type CpuDataRef = IORef [Float]
+
 cpuData :: IO [Float]
-cpuData = do s <- B.readFile "/proc/stat"
-             return $ cpuParser s
+cpuData = cpuParser `fmap` B.readFile "/proc/stat"
 
 cpuParser :: B.ByteString -> [Float]
-cpuParser =
-    map (read . B.unpack) . tail . B.words . head . B.lines
+cpuParser = map (read . B.unpack) . tail . B.words . head . B.lines
 
-parseCPU :: IO [Float]
-parseCPU =
-    do (a,b) <- doActionTwiceWithDelay 750000 cpuData
+parseCpu :: CpuDataRef -> IO [Float]
+parseCpu cref =
+    do a <- readIORef cref
+       b <- cpuData
+       writeIORef cref b
        let dif = zipWith (-) b a
            tot = foldr (+) 0 dif
            percent = map (/ tot) dif
@@ -46,8 +50,14 @@ formatCpu xs = do
   ps <- showPercentsWithColors (t:xs)
   return (b:ps)
 
-runCpu :: [String] -> Monitor String
-runCpu _ =
-    do c <- io parseCPU
+runCpu :: CpuDataRef -> [String] -> Monitor String
+runCpu cref _ =
+    do c <- io (parseCpu cref)
        l <- formatCpu c
        parseTemplate l
+
+startCpu :: [String] -> Int -> (String -> IO ()) -> IO ()
+startCpu a r cb = do
+  cref <- newIORef []
+  _ <- parseCpu cref
+  runM a cpuConfig (runCpu cref) r cb

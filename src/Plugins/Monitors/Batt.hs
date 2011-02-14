@@ -1,8 +1,8 @@
 -----------------------------------------------------------------------------
 -- |
 -- Module      :  Plugins.Monitors.Batt
--- Copyright   :  (c) 2010 Andrea Rossato, Petr Rockai
---                (c) 2010, 2011 Jose A Ortega
+-- Copyright   :  (c) 2010, 2011 Jose A Ortega
+--                (c) 2010 Andrea Rossato, Petr Rockai
 -- License     :  BSD-style (see LICENSE)
 --
 -- Maintainer  :  Jose A. Ortega Ruiz <jao@gnu.org>
@@ -93,15 +93,17 @@ batteryFiles :: String -> IO Files
 batteryFiles bat =
   do is_charge <- fileExist $ prefix </> "charge_now"
      is_energy <- fileExist $ prefix </> "energy_now"
+     is_current <- fileExist $ prefix </> "current_now"
+     let cf = if is_current then "current_now" else "power_now"
      return $ case (is_charge, is_energy) of
-       (True, _) -> files "charge"
-       (_, True) -> files "energy"
+       (True, _) -> files "charge" cf
+       (_, True) -> files "energy" cf
        _ -> NoFiles
   where prefix = sysDir </> bat
-        files ch = Files { fFull = prefix </> ch ++ "_full"
-                         , fNow = prefix </> ch ++ "_now"
-                         , fCurrent = prefix </> "power_now"
-                         , fVoltage = prefix </> "voltage_now" }
+        files ch cf = Files { fFull = prefix </> ch ++ "_full"
+                            , fNow = prefix </> ch ++ "_now"
+                            , fCurrent = prefix </> cf
+                            , fVoltage = prefix </> "voltage_now" }
 
 haveAc :: FilePath -> IO Bool
 haveAc f = do

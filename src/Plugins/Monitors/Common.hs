@@ -1,14 +1,15 @@
 -----------------------------------------------------------------------------
 -- |
 -- Module      :  Plugins.Monitors.Common
--- Copyright   :  (c) Andrea Rossato
+-- Copyright   :  (c) 2010, 2011 Jose Antonio Ortega Ruiz
+--                (c) 2007-2010 Andrea Rossato
 -- License     :  BSD-style (see LICENSE)
 --
 -- Maintainer  :  Jose A. Ortega Ruiz <jao@gnu.org>
 -- Stability   :  unstable
 -- Portability :  unportable
 --
--- Utilities for creating monitors for Xmobar
+-- Utilities used by xmobar's monitors
 --
 -----------------------------------------------------------------------------
 
@@ -50,13 +51,9 @@ module Plugins.Monitors.Common (
                        , parseFloat
                        , parseInt
                        , stringParser
-                       -- * Threaded Actions
-                       -- $thread
-                       , doActionTwiceWithDelay
                        ) where
 
 
-import Control.Concurrent
 import Control.Monad.Reader
 import qualified Data.ByteString.Lazy.Char8 as B
 import Data.IORef
@@ -420,22 +417,3 @@ showLogBar f v = do
                | x <= ll = 1 / bw
                | otherwise = f + logBase 2 (x / hh) / bw
   showPercentBar v $ choose v
-
--- $threads
-
-doActionTwiceWithDelay :: Int -> IO [a] -> IO ([a], [a])
-doActionTwiceWithDelay delay action =
-    do v1 <- newMVar []
-       forkIO $! getData action v1 0
-       v2 <- newMVar []
-       forkIO $! getData action v2 delay
-       threadDelay (delay `div` 3 * 4)
-       a <- readMVar v1
-       b <- readMVar v2
-       return (a,b)
-
-getData :: IO a -> MVar a -> Int -> IO ()
-getData action var d =
-    do threadDelay d
-       s <- action
-       modifyMVar_ var (\_ -> return $! s)

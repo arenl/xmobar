@@ -104,28 +104,28 @@ instance Exec Monitors where
 #ifdef ALSA
     alias (Volume m c _ _) = m ++ ":" ++ c
 #endif
-    start (Weather  s a r) = runM (a ++ [s]) weatherConfig  runWeather    r
-    start (Network  i a r) = runM (a ++ [i]) netConfig      runNet        r
-    start (Thermal  z a r) = runM (a ++ [z]) thermalConfig  runThermal    r
-    start (Memory     a r) = runM a          memConfig      runMem        r
-    start (Swap       a r) = runM a          swapConfig     runSwap       r
-    start (Cpu        a r) = runM a          cpuConfig      runCpu        r
-    start (MultiCpu   a r) = runM a          multiCpuConfig runMultiCpu   r
-    start (Battery    a r) = runM a          battConfig     runBatt       r
-    start (BatteryP s a r) = runM a          battConfig     (runBatt' s)  r
-    start (CpuFreq    a r) = runM a          cpuFreqConfig  runCpuFreq    r
-    start (CoreTemp   a r) = runM a          coreTempConfig runCoreTemp   r
-    start (DiskU    s a r) = runM a          diskUConfig    (runDiskU s)  r
-    start (DiskIO   s a r) = runM a          diskIOConfig   (runDiskIO s) r
-    start (TopMem     a r) = runM a          topMemConfig   runTopMem     r
-    start (Uptime     a r) = runM a          uptimeConfig   runUptime     r
-    start (TopProc    a r) = startTop a r
+    start (Network  i a r) = startNet i a r
+    start (Cpu a r) = startCpu a r
+    start (MultiCpu a r) = startMultiCpu a r
+    start (TopProc a r) = startTop a r
+    start (TopMem a r) = runM a topMemConfig runTopMem r
+    start (Weather s a r) = runM (a ++ [s]) weatherConfig runWeather r
+    start (Thermal z a r) = runM (a ++ [z]) thermalConfig runThermal r
+    start (Memory a r) = runM a memConfig runMem r
+    start (Swap a r) = runM a swapConfig runSwap r
+    start (Battery a r) = runM a battConfig runBatt r
+    start (BatteryP s a r) = runM a battConfig (runBatt' s) r
+    start (CpuFreq a r) = runM a cpuFreqConfig runCpuFreq r
+    start (CoreTemp a r) = runM a coreTempConfig runCoreTemp r
+    start (DiskU s a r) = runM a diskUConfig (runDiskU s) r
+    start (DiskIO s a r) = startDiskIO s a r
+    start (Uptime a r) = runM a uptimeConfig runUptime r
 #ifdef IWLIB
-    start (Wireless i a r) = runM (a ++ [i]) wirelessConfig runWireless   r
+    start (Wireless i a r) = runM (a ++ [i]) wirelessConfig runWireless r
 #endif
 #ifdef LIBMPD
-    start (MPD        a r) = runM a          mpdConfig      runMPD        r
+    start (MPD a r) = runM a mpdConfig runMPD r
 #endif
 #ifdef ALSA
-    start (Volume m c a r) = runM a          volumeConfig  (runVolume m c) r
+    start (Volume m c a r) = runM a volumeConfig (runVolume m c) r
 #endif
