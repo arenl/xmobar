@@ -28,7 +28,6 @@ import XUtil
 import Data.List (intercalate)
 
 import Paths_xmobar (version)
-import Data.IORef
 import Data.Version (showVersion)
 import Graphics.X11.Xlib
 import System.Console.GetOpt
@@ -56,9 +55,7 @@ main = do
   rootw <- rootWindow d (defaultScreen d)
   selectInput d rootw structureNotifyMask
 
-  civ   <- newIORef c
-  doOpts civ o
-  conf  <- readIORef civ
+  conf  <- doOpts c o
   fs    <- initFont d (font conf)
   cls   <- mapM (parseTemplate conf) (splitTemplate conf)
   vars  <- mapM (mapM startCommand) cls
@@ -152,23 +149,23 @@ license = "\nThis program is distributed in the hope that it will be useful,\n" 
           "MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.\n" ++
           "See the License for more details."
 
-doOpts :: IORef Config -> [Opts] -> IO ()
-doOpts _  [] = return ()
+doOpts :: Config -> [Opts] -> IO Config
+doOpts conf []     = return conf
 doOpts conf (o:oo) =
     case o of
       Help       -> putStr   usage >> exitWith ExitSuccess
       Version    -> putStrLn info  >> exitWith ExitSuccess
-      Font     s -> modifyIORef conf (\c -> c { font     = s     }) >> go
-      BgColor  s -> modifyIORef conf (\c -> c { bgColor  = s     }) >> go
-      FgColor  s -> modifyIORef conf (\c -> c { fgColor  = s     }) >> go
-      T          -> modifyIORef conf (\c -> c { position = Top   }) >> go
-      B          -> modifyIORef conf (\c -> c { position = Bottom}) >> go
-      AlignSep s -> modifyIORef conf (\c -> c { alignSep = s     }) >> go
-      SepChar  s -> modifyIORef conf (\c -> c { sepChar  = s     }) >> go
-      Template s -> modifyIORef conf (\c -> c { template = s     }) >> go
-      OnScr    n -> modifyIORef conf (\c -> c { position = OnScreen (read n) $ position c }) >> go
+      Font     s -> doOpts (conf {font     = s     }) oo
+      BgColor  s -> doOpts (conf {bgColor  = s     }) oo
+      FgColor  s -> doOpts (conf {fgColor  = s     }) oo
+      T          -> doOpts (conf {position = Top   }) oo
+      B          -> doOpts (conf {position = Bottom}) oo
+      AlignSep s -> doOpts (conf {alignSep = s     }) oo
+      SepChar  s -> doOpts (conf {sepChar  = s     }) oo
+      Template s -> doOpts (conf {template = s     }) oo
+      OnScr    n -> doOpts (conf {position = OnScreen (read n) $ position conf}) oo
       Commands s -> case readCom s of
-                      Right x -> modifyIORef conf (\c -> c { commands = x }) >> go
+                      Right x -> doOpts (conf { commands = x }) oo
                       Left e  -> putStr (e ++ usage) >> exitWith (ExitFailure 1)
     where readCom str =
               case readStr str of
@@ -176,4 +173,3 @@ doOpts conf (o:oo) =
 	        _   -> Left "xmobar: cannot read list of commands specified with the -c option\n"
           readStr str =
               [x | (x,t) <- reads str, ("","") <- lex t]
-          go = doOpts conf oo
