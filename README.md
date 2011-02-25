@@ -329,9 +329,9 @@ standard input reader, an Unix named pipe reader, and a configurable
 date plugin. These plugins install the following internal commands:
 `Weather`, `Network`, `Wireless` (optional), `Memory`, `Swap`, `Cpu`,
 `MultiCpu`, `Battery`, `TopProc`, `TopMem`, `DiskU`, `DiskIO`,
-`Thermal`, `CpuFreq`, `CoreTemp`, `Volume` (optional), `MPD`
-(optional), `Mail` (optional), `MBox` (optional), `Date`, `Uptime`,
-`StdinReader`, `CommandReader`, and `PipeReader`.
+`Thermal`, `ThermalZone`, `CpuFreq`, `CoreTemp`, `Volume` (optional),
+`MPD` (optional), `Mail` (optional), `MBox` (optional), `Date`,
+`Uptime`, `StdinReader`, `CommandReader`, and `PipeReader`.
 
 To remove them see below Installing/Removing a Plugin
 
@@ -527,9 +527,28 @@ Monitors have default aliases.
 
          Disks [("/", "<read> <write>"), ("sdb1", "<total>")] [] 10
 
+`ThermalZone Number Args RefreshRate`
+
+- Aliases to "thermaln": so `ThermalZone 0 []` can be used in template
+  as `%thermal0%`
+- Args: default monitor arguments (see below)
+- Variables that can be used with the `-t`/`--template` argument:
+	    `temp`
+- Default template: `<temp>C`
+- This plugin works only on sytems with devices having thermal zone.
+  Check directories in `/sys/class/thermal` for possible values of the
+  zone number (e.g., 0 corresponds to `thermal_zone0` in that
+  directory).
+- Example:
+
+         Run ThermalZone 0 ["-t","<id>: <temp>C"] 30
+
 `Thermal Zone Args RefreshRate`
 
-- Aliases to the Zone: so `Zone "THRM" []` can be used in template as `%THRM%`
+- **This plugin is deprecated. Use `ThermalZone` instead.**
+
+- Aliases to the Zone: so `Thermal "THRM" []` can be used in template
+  as `%THRM%`
 - Args: default monitor arguments (see below)
 - Variables that can be used with the `-t`/`--template` argument:
 	    `temp`
@@ -538,7 +557,7 @@ Monitors have default aliases.
   Check directories in /proc/acpi/thermal_zone for possible values.
 - Example:
 
-         Run Thermal "THRM" ["-t","iwl4965-temp: <temp>C"]
+         Run Thermal "THRM" ["-t","iwl4965-temp: <temp>C"] 50
 
 `CpuFreq Args RefreshRate`
 

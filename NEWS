@@ -7,6 +7,9 @@ _New features_
 
   - New `Volume` monitor displaying ALSA soundcards information, by
     Thomas Tuegel.
+  - New `ThermalZone` plugin substituting `Thermal` and using linux's
+    *sysfs* interface (you need this one if you're using a kernel
+    version equal to or above 2.6.37). See [issue 44].
   - xmobar app new has WM_CLASS, WM_NAME and _NET_WM_PID xprops
     ([issue 38]).
 
@@ -40,6 +43,7 @@ _Bug fixes_
 [issue 38]: http://code.google.com/p/xmobar/issues/detail?id=38
 [issue 40]: http://code.google.com/p/xmobar/issues/detail?id=40
 [issue 42]: http://code.google.com/p/xmobar/issues/detail?id=42
+[issue 44]: http://code.google.com/p/xmobar/issues/detail?id=44
 
 ## Version 0.12 (Dec 24, 2010)
 

@@ -3,7 +3,8 @@
 -----------------------------------------------------------------------------
 -- |
 -- Module      :  Xmobar.Plugins.Monitors
--- Copyright   :  (c) Andrea Rossato
+-- Copyright   :  (c) 2010, 2011 Jose Antonio Ortega Ruiz
+                  (c) 2007-10 Andrea Rossato
 -- License     :  BSD-style (see LICENSE)
 --
 -- Maintainer  :  Jose A. Ortega Ruiz <jao@gnu.org>
@@ -27,6 +28,7 @@ import Plugins.Monitors.Cpu
 import Plugins.Monitors.MultiCpu
 import Plugins.Monitors.Batt
 import Plugins.Monitors.Thermal
+import Plugins.Monitors.ThermalZone
 import Plugins.Monitors.CpuFreq
 import Plugins.Monitors.CoreTemp
 import Plugins.Monitors.Disk
@@ -42,22 +44,23 @@ import Plugins.Monitors.MPD
 import Plugins.Monitors.Volume
 #endif
 
-data Monitors = Weather  Station    Args Rate
-              | Network  Interface  Args Rate
-              | Memory   Args       Rate
-              | Swap     Args       Rate
-              | Cpu      Args       Rate
-              | MultiCpu Args       Rate
-              | Battery  Args       Rate
-              | BatteryP [String]   Args Rate
-              | DiskU    DiskSpec   Args Rate
-              | DiskIO   DiskSpec   Args Rate
-              | Thermal  Zone       Args Rate
-              | CpuFreq  Args       Rate
-              | CoreTemp Args       Rate
-              | TopProc  Args       Rate
-              | TopMem   Args       Rate
-              | Uptime   Args       Rate
+data Monitors = Weather      Station    Args Rate
+              | Network      Interface  Args Rate
+              | BatteryP     [String]   Args Rate
+              | DiskU        DiskSpec   Args Rate
+              | DiskIO       DiskSpec   Args Rate
+              | Thermal      Zone       Args Rate
+              | ThermalZone  ZoneNo     Args Rate
+              | Memory       Args       Rate
+              | Swap         Args       Rate
+              | Cpu          Args       Rate
+              | MultiCpu     Args       Rate
+              | Battery      Args       Rate
+              | CpuFreq      Args       Rate
+              | CoreTemp     Args       Rate
+              | TopProc      Args       Rate
+              | TopMem       Args       Rate
+              | Uptime       Args       Rate
 #ifdef IWLIB
               | Wireless Interface  Args Rate
 #endif
@@ -74,32 +77,34 @@ type Program   = String
 type Alias     = String
 type Station   = String
 type Zone      = String
+type ZoneNo    = Int
 type Interface = String
 type Rate      = Int
 type DiskSpec  = [(String, String)]
 
 instance Exec Monitors where
-    alias (Weather  s _ _) = s
-    alias (Network  i _ _) = i
-    alias (Thermal  z _ _) = z
-    alias (Memory     _ _) = "memory"
-    alias (Swap       _ _) = "swap"
-    alias (Cpu        _ _) = "cpu"
-    alias (MultiCpu   _ _) = "multicpu"
-    alias (Battery    _ _) = "battery"
-    alias (BatteryP  _ _ _)= "battery"
-    alias (CpuFreq    _ _) = "cpufreq"
-    alias (TopProc    _ _) = "top"
-    alias (TopMem     _ _) = "topmem"
-    alias (CoreTemp   _ _) = "coretemp"
-    alias (DiskU    _ _ _) = "disku"
-    alias (DiskIO   _ _ _) = "diskio"
-    alias (Uptime     _ _) = "uptime"
+    alias (Weather s _ _) = s
+    alias (Network i _ _) = i
+    alias (Thermal z _ _) = z
+    alias (ThermalZone z _ _) = "thermal" ++ show z
+    alias (Memory _ _) = "memory"
+    alias (Swap _ _) = "swap"
+    alias (Cpu _ _) = "cpu"
+    alias (MultiCpu _ _) = "multicpu"
+    alias (Battery _ _) = "battery"
+    alias (BatteryP _ _ _)= "battery"
+    alias (CpuFreq _ _) = "cpufreq"
+    alias (TopProc _ _) = "top"
+    alias (TopMem _ _) = "topmem"
+    alias (CoreTemp _ _) = "coretemp"
+    alias (DiskU _ _ _) = "disku"
+    alias (DiskIO _ _ _) = "diskio"
+    alias (Uptime _ _) = "uptime"
 #ifdef IWLIB
     alias (Wireless i _ _) = i ++ "wi"
 #endif
 #ifdef LIBMPD
-    alias (MPD        _ _) = "mpd"
+    alias (MPD _ _) = "mpd"
 #endif
 #ifdef ALSA
     alias (Volume m c _ _) = m ++ ":" ++ c
@@ -111,6 +116,8 @@ instance Exec Monitors where
     start (TopMem a r) = runM a topMemConfig runTopMem r
     start (Weather s a r) = runM (a ++ [s]) weatherConfig runWeather r
     start (Thermal z a r) = runM (a ++ [z]) thermalConfig runThermal r
+    start (ThermalZone z a r) =
+      runM (a ++ [show z]) thermalZoneConfig runThermalZone r
     start (Memory a r) = runM a memConfig runMem r
     start (Swap a r) = runM a swapConfig runSwap r
     start (Battery a r) = runM a battConfig runBatt r
