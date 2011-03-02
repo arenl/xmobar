@@ -11,7 +11,7 @@
 --
 --
 -- A thermal zone plugin based on the sysfs linux interface.
--- See http://www.mjmwired.net/kernel/Documentation/thermal/sysfs-api.txt
+-- See http://kernel.org/doc/Documentation/thermal/sysfs-api.txt
 --
 ------------------------------------------------------------------------------
 

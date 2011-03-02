@@ -4,7 +4,7 @@
 -- |
 -- Module      :  Xmobar.Plugins.Monitors
 -- Copyright   :  (c) 2010, 2011 Jose Antonio Ortega Ruiz
-                  (c) 2007-10 Andrea Rossato
+--                (c) 2007-10 Andrea Rossato
 -- License     :  BSD-style (see LICENSE)
 --
 -- Maintainer  :  Jose A. Ortega Ruiz <jao@gnu.org>
