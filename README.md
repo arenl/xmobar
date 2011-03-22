@@ -623,9 +623,9 @@ Monitors have default aliases.
 - Aliases to `mpd`
 - Args: default monitor arguments (see below). In addition you can provide
   `-P`, `-S` and `-Z`, with an string argument, to represent the
-  playing, stopped and paused states in the `statei` template field,
-  and `-h`, `-p` and `-x` for the host, port and password (default
-  host is "localhost", port 6600 and empty password).
+  playing, stopped and paused states in the `statei` template field.
+  The environment variables `MPD_HOST` and `MPD_PORT` are used to configure the
+  mpd server to communicate with.
 - Variables that can be used with the `-t`/`--template` argument:
              `bar`, `state`, `statei`, `volume`, `length`
              `lapsed`, `remaining`,
