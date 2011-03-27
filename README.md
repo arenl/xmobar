@@ -46,7 +46,7 @@ bells and whistles, use:
 If you don't have `cabal-install` installed, you can get xmobar's
 source code in a variety of ways:
 
-  - From [Hackage]. Just download [xmobar-0.12.tar.gz] from xmobar's
+  - From [Hackage]. Just download [xmobar-0.13.tar.gz] from xmobar's
     hackage page.
   - From [Github]. You can also obtain a tarball in [Github's
     downloads page]. You'll find there links to each tagged release.
@@ -55,13 +55,13 @@ source code in a variety of ways:
     git:
         git clone git://github.com/jaor/xmobar
 
-[xmobar-0.12.tar.gz]: http://hackage.haskell.org/packages/archive/xmobar/0.12/xmobar-0.12.tar.gz
+[xmobar-0.13.tar.gz]: http://hackage.haskell.org/packages/archive/xmobar/0.13/xmobar-0.13.tar.gz
 [Github's downloads page]: https://github.com/jaor/xmobar/downloads
 
 To install simply run (if needed):
 
-        tar xvfz xmobar-0.12
-        cd xmobar-0.12
+        tar xvfz xmobar-0.13
+        cd xmobar-0.13
 
 If you have cabal installed, you can now use it from within xmobar's
 source tree. Otherwise, run the configure script:
