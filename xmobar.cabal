@@ -59,7 +59,7 @@ flag with_alsa
 
 flag with_gmail
   description: Gmail support
-  default: false
+  default: False
 
 executable xmobar
     hs-source-dirs:     src
