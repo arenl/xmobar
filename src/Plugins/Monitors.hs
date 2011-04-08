@@ -43,6 +43,9 @@ import Plugins.Monitors.MPD
 #ifdef ALSA
 import Plugins.Monitors.Volume
 #endif
+#ifdef GMAIL
+import Plugins.Monitors.GMail
+#endif
 
 data Monitors = Weather      Station    Args Rate
               | Network      Interface  Args Rate
@@ -70,6 +73,9 @@ data Monitors = Weather      Station    Args Rate
 #ifdef ALSA
               | Volume   String     String Args Rate
 #endif
+#ifdef GMAIL
+              | GMail    Account    Pass Args Rate
+#endif
                 deriving (Show,Read,Eq)
 
 type Args      = [String]
@@ -81,6 +87,8 @@ type ZoneNo    = Int
 type Interface = String
 type Rate      = Int
 type DiskSpec  = [(String, String)]
+type Account   = String
+type Pass      = String
 
 instance Exec Monitors where
     alias (Weather s _ _) = s
@@ -109,6 +117,9 @@ instance Exec Monitors where
 #ifdef ALSA
     alias (Volume m c _ _) = m ++ ":" ++ c
 #endif
+#ifdef GMAIL
+    alias (GMail  u _ _ _) = u
+#endif
     start (Network  i a r) = startNet i a r
     start (Cpu a r) = startCpu a r
     start (MultiCpu a r) = startMultiCpu a r
@@ -135,4 +146,7 @@ instance Exec Monitors where
 #endif
 #ifdef ALSA
     start (Volume m c a r) = runM a volumeConfig (runVolume m c) r
+#endif
+#ifdef GMAIL
+    start (GMail  u p a r) = runM ([u, p] ++ a) gmailConfig runGMail r
 #endif
