@@ -46,6 +46,9 @@ import Plugins.Monitors.Volume
 #ifdef GMAIL
 import Plugins.Monitors.GMail
 #endif
+#ifdef GREADER
+import Plugins.Monitors.GReader
+#endif
 
 data Monitors = Weather      Station    Args Rate
               | Network      Interface  Args Rate
@@ -75,6 +78,9 @@ data Monitors = Weather      Station    Args Rate
 #endif
 #ifdef GMAIL
               | GMail    Account    Pass Args Rate
+#endif
+#ifdef GREADER
+              | GReader  Account    Pass Args Rate
 #endif
                 deriving (Show,Read,Eq)
 
@@ -118,7 +124,10 @@ instance Exec Monitors where
     alias (Volume m c _ _) = m ++ ":" ++ c
 #endif
 #ifdef GMAIL
-    alias (GMail  u _ _ _) = u
+    alias (GMail u _ _ _) = "gmail." ++ u
+#endif
+#ifdef GREADER
+    alias (GReader u _ _ _) = "greader." ++ u
 #endif
     start (Network  i a r) = startNet i a r
     start (Cpu a r) = startCpu a r
@@ -148,5 +157,8 @@ instance Exec Monitors where
     start (Volume m c a r) = runM a volumeConfig (runVolume m c) r
 #endif
 #ifdef GMAIL
-    start (GMail  u p a r) = runM ([u, p] ++ a) gmailConfig runGMail r
+    start (GMail u p a r)   = runM ([u, p] ++ a) gmailConfig runGMail r
+#endif
+#ifdef GREADER
+    start (GReader u p a r) = runM ([u, p] ++ a) gReaderConfig runGReader r
 #endif

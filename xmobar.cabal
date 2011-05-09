@@ -61,6 +61,10 @@ flag with_gmail
   description: Gmail support
   default: False
 
+flag with_greader
+  description: Google Reader support
+  default: False
+
 executable xmobar
     hs-source-dirs:     src
     main-is:            Main.hs
@@ -126,3 +130,7 @@ executable xmobar
 
     if flag(with_gmail) || flag(all_extensions)
        cpp-options: -DGMAIL
+
+    if flag(with_greader) || flag(all_extensions)
+       build-depends: curl, hxt, hxt-xpath
+       cpp-options: -DGREADER
