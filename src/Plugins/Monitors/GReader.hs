@@ -52,7 +52,7 @@ getAuth u p = do
 -- | Get reader feed
 retrieveFeed :: String -> IO String
 retrieveFeed token = do 
-  [CurlHttpHeaders ["Authorization: GoogleLogin auth=" ++ token]]  
+  let params = [CurlHttpHeaders ["Authorization: GoogleLogin auth=" ++ token]]  
   (st,resp) <- curlGetString url params
   case st of
     CurlOK -> return resp
