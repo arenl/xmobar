@@ -123,7 +123,7 @@ readBattery files =
        return $ Battery (3600 * a / 1000000) -- wattseconds
                         (3600 * b / 1000000) -- wattseconds
                         (c / 1000000) -- volts
-                        (d / c) -- amperes
+                        (if c > 0 then (d / c) else -1) -- amperes
     where grab = fmap (read . B.unpack) . B.readFile
 
 readBatteries :: BattOpts -> [Files] -> IO Result
@@ -131,10 +131,12 @@ readBatteries opts bfs =
     do bats <- mapM readBattery (take 3 bfs)
        ac <- haveAc (onlineFile opts)
        let sign = if ac then 1 else -1
-           left = sum (map now bats) / sum (map full bats)
+           ft = sum (map full bats)
+           left = if ft > 0 then sum (map now bats) / ft else 0
            watts = sign * sum (map voltage bats) * sum (map current bats)
            time = if watts == 0 then 0 else sum $ map time' bats
-           time' b = (if ac then full b - now b else now b) / (sign * watts)
+           mwatts = if watts == 0 then 1 else sign * watts
+           time' b = (if ac then full b - now b else now b) / mwatts
            acstr = if ac then onString opts else offString opts
        return $ if isNaN left then NA else Result left watts time acstr
 
